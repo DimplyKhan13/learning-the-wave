@@ -18,6 +18,11 @@ export interface ModelConfig {
   hiddenLayers: number;
   hiddenUnits: number;
   learningRate: number;
+  /** Shrink the learning rate exponentially to `finalLearningRate` over this many steps (0 = constant). */
+  decaySteps: number;
+  finalLearningRate: number;
+  /** Unlock the Fourier frequencies from slow to fast over this many steps (0 = all at once). */
+  coarseToFineSteps: number;
   /** Fixed seed so every visitor watches the same run. */
   seed: number;
 }
@@ -29,6 +34,9 @@ export const DEFAULT_CONFIG: ModelConfig = {
   hiddenLayers: 3,
   hiddenUnits: 128,
   learningRate: 1e-3,
+  decaySteps: 0,
+  finalLearningRate: 1e-3,
+  coarseToFineSteps: 0,
   seed: 1831, // the year Hokusai published the print
 };
 
@@ -88,6 +96,11 @@ export class PaintingNet {
   private readonly target: tf.Tensor2D; // the real colors, in [0, 1]
   private readonly params: tf.Variable[] = [];
   private readonly optimizer: tf.Optimizer;
+  private steps = 0;
+  /** Rank of each frequency from slowest (0) to fastest, for coarse-to-fine. */
+  private readonly frequencyRank: number[] = [];
+  /** Per-feature weights in [0, 1] while frequencies are being unlocked; null when all are on. */
+  private frequencyMask: tf.Tensor2D | null = null;
 
   /** @param pixels the original image, shape [H, W, 3], values in [0, 1]. */
   constructor(pixels: tf.Tensor3D, config: ModelConfig) {
@@ -111,6 +124,46 @@ export class PaintingNet {
     }
     this.parameterCount = this.params.reduce((n, p) => n + p.size, 0);
     this.optimizer = tf.train.adam(config.learningRate);
+
+    if (this.B && config.coarseToFineSteps > 0) {
+      const b = this.B.dataSync();
+      const m = config.frequencies;
+      const order = Array.from({ length: m }, (_, k) => k).sort(
+        (i, j) => Math.hypot(b[i], b[m + i]) - Math.hypot(b[j], b[m + j]),
+      );
+      order.forEach((k, rank) => (this.frequencyRank[k] = rank));
+      this.updateSchedule();
+    }
+  }
+
+  /**
+   * Training schedules, applied before every step:
+   * - learning rate: big steps early to get the shapes, small steps late to settle the detail;
+   * - coarse-to-fine: frequencies fade in from slowest to fastest, so the network
+   *   lays down the broad shapes before it is handed the fine stripes.
+   */
+  private updateSchedule(): void {
+    const { decaySteps, learningRate, finalLearningRate, coarseToFineSteps, frequencies: m } = this.config;
+    if (decaySteps > 0) {
+      const progress = Math.min(this.steps / decaySteps, 1);
+      // Adam reads this field on every update.
+      (this.optimizer as unknown as { learningRate: number }).learningRate =
+        learningRate * (finalLearningRate / learningRate) ** progress;
+    }
+    if (this.frequencyRank.length && (this.frequencyMask || this.steps === 0) && this.steps % 10 === 0) {
+      this.frequencyMask?.dispose();
+      this.frequencyMask = null;
+      if (this.steps < coarseToFineSteps) {
+        // Start with the slowest eighth of the frequencies, end with all of them.
+        const unlocked = m / 8 + ((7 * m) / 8) * (this.steps / coarseToFineSteps);
+        const weights = new Float32Array(2 * m);
+        this.frequencyRank.forEach((rank, k) => {
+          const w = Math.min(Math.max(unlocked - rank, 0), 1); // each frequency fades in over one rank
+          weights[k] = weights[m + k] = w;
+        });
+        this.frequencyMask = tf.tensor2d(weights, [1, 2 * m]);
+      }
+    }
   }
 
   /** What the network actually receives for a coordinate: γ(x, y), or plain (x, y). */
@@ -121,7 +174,7 @@ export class PaintingNet {
   /** The function itself: encoded coordinates in, colors out. */
   private forward(inputs: tf.Tensor2D): tf.Tensor2D {
     return tf.tidy(() => {
-      let h = inputs;
+      let h: tf.Tensor2D = this.frequencyMask ? inputs.mul(this.frequencyMask) : inputs;
       for (let i = 0; i < this.params.length; i += 2) {
         h = h.matMul(this.params[i] as tf.Tensor2D).add(this.params[i + 1]);
         h = i + 2 < this.params.length ? h.relu() : h.sigmoid();
@@ -165,6 +218,8 @@ export class PaintingNet {
    * forces a sync and slows the loop.
    */
   step(returnLoss = false): tf.Scalar | null {
+    this.updateSchedule();
+    this.steps++;
     const loss = () => tf.losses.meanSquaredError(this.target, this.predict()) as tf.Scalar;
     return this.optimizer.minimize(loss, returnLoss, this.params);
   }
@@ -172,6 +227,7 @@ export class PaintingNet {
   dispose(): void {
     tf.dispose([this.inputs, this.target, ...this.params]);
     this.B?.dispose();
+    this.frequencyMask?.dispose();
     this.optimizer.dispose();
   }
 }

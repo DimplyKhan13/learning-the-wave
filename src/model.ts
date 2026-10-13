@@ -57,8 +57,15 @@ export function fourierFeatures(coords: tf.Tensor2D, B: tf.Tensor2D): tf.Tensor2
   });
 }
 
+/** A pixel counts as "painted right" when every channel is within 5% of the original. */
+export const PIXEL_TOLERANCE = 0.05;
+
 export class PaintingNet {
   readonly config: ModelConfig;
+  /** The fixed random frequencies of the Fourier features, shape [2, m]; null without them. */
+  readonly B: tf.Tensor2D | null;
+  /** How many numbers training gets to adjust (all weights and biases). */
+  readonly parameterCount: number;
   private readonly inputs: tf.Tensor2D; // encoded coordinates, computed once
   private readonly target: tf.Tensor2D; // the real colors, in [0, 1]
   private readonly params: tf.Variable[] = [];
@@ -71,12 +78,10 @@ export class PaintingNet {
     this.target = pixels.reshape([height * width, 3]) as tf.Tensor2D;
 
     // The input never changes, so encode it once instead of on every step.
-    this.inputs = tf.tidy(() => {
-      const coords = pixelCoordinates(width, height);
-      if (!config.fourier) return coords;
-      const B = tf.randomNormal<tf.Rank.R2>([2, config.frequencies], 0, config.sigma, 'float32', config.seed);
-      return fourierFeatures(coords, B);
-    });
+    this.B = config.fourier
+      ? tf.randomNormal<tf.Rank.R2>([2, config.frequencies], 0, config.sigma, 'float32', config.seed)
+      : null;
+    this.inputs = tf.tidy(() => this.encode(pixelCoordinates(width, height)));
 
     // A stack of dense layers: ReLU in the middle, 3 outputs (r, g, b) at the end.
     const sizes = [this.inputs.shape[1], ...Array(config.hiddenLayers).fill(config.hiddenUnits), 3];
@@ -86,19 +91,45 @@ export class PaintingNet {
       this.params.push(tf.variable(w), tf.variable(tf.zeros([sizes[i + 1]])));
       w.dispose();
     }
+    this.parameterCount = this.params.reduce((n, p) => n + p.size, 0);
     this.optimizer = tf.train.adam(config.learningRate);
   }
 
-  /** The network's painting: one color per pixel, shape [H*W, 3], values in [0, 1]. */
-  predict(): tf.Tensor2D {
+  /** What the network actually receives for a coordinate: γ(x, y), or plain (x, y). */
+  private encode(coords: tf.Tensor2D): tf.Tensor2D {
+    return this.B ? fourierFeatures(coords, this.B) : coords.clone();
+  }
+
+  /** The function itself: encoded coordinates in, colors out. */
+  private forward(inputs: tf.Tensor2D): tf.Tensor2D {
     return tf.tidy(() => {
-      let h: tf.Tensor2D = this.inputs;
+      let h = inputs;
       for (let i = 0; i < this.params.length; i += 2) {
         h = h.matMul(this.params[i] as tf.Tensor2D).add(this.params[i + 1]);
         h = i + 2 < this.params.length ? h.relu() : h.sigmoid();
       }
       return h;
     });
+  }
+
+  /** The network's painting: one color per pixel, shape [H*W, 3], values in [0, 1]. */
+  predict(): tf.Tensor2D {
+    return this.forward(this.inputs);
+  }
+
+  /** Paint and score in one pass: the colors plus the share of pixels painted right. */
+  evaluate(): { colors: tf.Tensor2D; accuracy: tf.Scalar } {
+    return tf.tidy(() => {
+      const colors = this.predict();
+      const worstChannel = colors.sub(this.target).abs().max(1);
+      const accuracy = worstChannel.lessEqual(PIXEL_TOLERANCE).toFloat().mean() as tf.Scalar;
+      return { colors, accuracy };
+    });
+  }
+
+  /** Call the function at any point, even between pixels. Returns [r, g, b] in [0, 1]. */
+  colorAt(x: number, y: number): tf.Tensor1D {
+    return tf.tidy(() => this.forward(this.encode(tf.tensor2d([[x, y]]))).squeeze() as tf.Tensor1D);
   }
 
   /**
@@ -114,6 +145,7 @@ export class PaintingNet {
 
   dispose(): void {
     tf.dispose([this.inputs, this.target, ...this.params]);
+    this.B?.dispose();
     this.optimizer.dispose();
   }
 }

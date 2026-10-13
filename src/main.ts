@@ -2,8 +2,9 @@
  * Page wiring: pick a backend, load the painting, connect the buttons.
  */
 import * as tf from '@tensorflow/tfjs';
-import { DEFAULT_CONFIG, psnr, type ModelConfig } from './model';
-import { LossChart } from './chart';
+import { DEFAULT_CONFIG, PIXEL_TOLERANCE, psnr, type ModelConfig } from './model';
+import { MetricChart } from './chart';
+import { drawTiles, formulaHtml, inputTiles } from './equation';
 import { Trainer } from './trainer';
 // Bundle the WASM fallback with the site instead of fetching it from a CDN.
 import wasmPlain from '@tensorflow/tfjs-backend-wasm/dist/tfjs-backend-wasm.wasm?url';
@@ -14,6 +15,8 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 const original = $<HTMLImageElement>('original');
 const painting = $<HTMLCanvasElement>('painting');
 const stepBadge = $('step-badge');
+const paintingCaption = $('painting-caption');
+const eqCount = $('eq-count');
 const status = $('status');
 const playButton = $<HTMLButtonElement>('play');
 const restartButton = $<HTMLButtonElement>('restart');
@@ -34,15 +37,17 @@ async function pickBackend(): Promise<string> {
     try {
       if (name === 'wasm') {
         const { setWasmPaths } = await import('@tensorflow/tfjs-backend-wasm');
+        // Single-threaded: threads need cross-origin isolation, which static hosts can't provide.
+        tf.env().set('WASM_HAS_MULTITHREAD_SUPPORT', false);
         setWasmPaths({
           'tfjs-backend-wasm.wasm': wasmPlain,
           'tfjs-backend-wasm-simd.wasm': wasmSimd,
-          'tfjs-backend-wasm-threaded-simd.wasm': wasmThreaded,
+          'tfjs-backend-wasm-threaded-simd.wasm': wasmThreaded, // required by the map, never loaded
         });
       }
       if (await tf.setBackend(name)) return name;
-    } catch {
-      // try the next one
+    } catch (err) {
+      console.warn(`backend ${name} unavailable`, err); // try the next one
     }
   }
   throw new Error('no TensorFlow.js backend available');
@@ -69,25 +74,27 @@ async function main(): Promise<void> {
     backend === 'webgl' ? DEFAULT_CONFIG : { ...DEFAULT_CONFIG, frequencies: 64, hiddenLayers: 2, hiddenUnits: 64 };
   let config = base;
 
-  const chart = new LossChart($<HTMLCanvasElement>('chart'));
+  // Main chart: share of pixels painted right. The log-scale error chart is
+  // kept, hidden; `?chart=error` swaps it back in.
+  const showError = params.get('chart') === 'error';
+  $('accuracy-panel').hidden = showError;
+  $('error-panel').hidden = !showError;
+  const accuracyChart = new MetricChart($<HTMLCanvasElement>('accuracy-chart'), {
+    title: `PIXELS PAINTED RIGHT (±${PIXEL_TOLERANCE * 100}%)`,
+    scale: 'percent',
+  });
+  const errorChart = new MetricChart($<HTMLCanvasElement>('chart'), { title: 'ERROR (MSE, log scale)', scale: 'log' });
   let lastLoss = NaN;
-  let chartQueued = false;
+  const aspect = image.naturalWidth / image.naturalHeight;
 
   const trainer = new Trainer(pixels, {
     onLoss(step, loss) {
       lastLoss = loss;
-      chart.push(step, loss);
-      // Redraw the chart at most once per frame.
-      if (!chartQueued) {
-        chartQueued = true;
-        requestAnimationFrame(() => {
-          chartQueued = false;
-          chart.draw();
-        });
-      }
+      errorChart.push(step, loss);
     },
-    async onPaint(step, img) {
+    async onPaint(step, img, accuracy) {
       await tf.browser.toPixels(img, painting);
+      accuracyChart.push(step, accuracy);
       stepBadge.textContent = `step ${step.toLocaleString('en-US')}`;
     },
     onStatus({ running, step, stepsPerSecond }) {
@@ -99,6 +106,8 @@ async function main(): Promise<void> {
         Number.isFinite(lastLoss) ? `PSNR ${psnr(lastLoss).toFixed(1)} dB` : '',
       ];
       status.textContent = parts.filter(Boolean).join(' · ');
+      const numbers = trainer.net?.parameterCount.toLocaleString('en-US') ?? '';
+      eqCount.innerHTML = `<strong>${numbers}</strong> numbers (the W's and b's), adjusted <strong>${step.toLocaleString('en-US')}</strong> times so far.`;
     },
   });
 
@@ -106,12 +115,49 @@ async function main(): Promise<void> {
   const start = async (next: ModelConfig) => {
     config = next;
     lastLoss = NaN;
-    chart.reset(label(config));
+    accuracyChart.reset(label(config));
+    errorChart.reset(label(config));
     toggleButtons.forEach((b) => b.setAttribute('aria-checked', String(b.dataset.fourier === String(config.fourier))));
     trainer.pause();
     await trainer.restart(config);
+    await showEquation();
     trainer.play();
   };
+
+  // The equation panel follows the current mode (with or without Fourier features).
+  const showEquation = async () => {
+    $('formula').innerHTML = formulaHtml(config);
+    $('tiles-intro').textContent = config.fourier
+      ? `What the network actually receives: (x, y) turned into ${config.frequencies * 2} striped patterns. A few of them, from slow to fast:`
+      : 'What the network receives without Fourier features: just two smooth ramps, x and y. Fine detail is hard to build from these.';
+    drawTiles($('tiles'), await inputTiles(trainer.net!), aspect);
+  };
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    accuracyChart.draw();
+    errorChart.draw();
+    void showEquation();
+  });
+
+  // Hover or touch the painting: call the function at that exact point, even between pixels.
+  let probing = false;
+  const probe = async (event: PointerEvent) => {
+    if (probing || !trainer.net) return;
+    probing = true;
+    const rect = painting.getBoundingClientRect();
+    const toCoord = (offset: number, size: number, pixels: number) =>
+      -1 + (2 * ((offset / size) * pixels - 0.5)) / (pixels - 1);
+    const x = toCoord(event.clientX - rect.left, rect.width, painting.width);
+    const y = toCoord(event.clientY - rect.top, rect.height, painting.height);
+    const color = trainer.net.colorAt(x, y);
+    const [r, g, b] = Array.from(await color.data(), (v) => Math.round(v * 255));
+    color.dispose();
+    const fmt = (v: number) => (v < 0 ? '−' : '') + Math.abs(v).toFixed(2);
+    paintingCaption.innerHTML = `<span class="swatch" style="background: rgb(${r} ${g} ${b})"></span>f(${fmt(x)}, ${fmt(y)}) = rgb(${r}, ${g}, ${b})`;
+    probing = false;
+  };
+  painting.addEventListener('pointermove', probe);
+  painting.addEventListener('pointerdown', probe);
+  painting.addEventListener('pointerleave', () => (paintingCaption.textContent = 'What the network paints'));
 
   playButton.addEventListener('click', () => (trainer.running ? trainer.pause() : trainer.play()));
   restartButton.addEventListener('click', () => void start(config));
@@ -126,7 +172,7 @@ async function main(): Promise<void> {
   await start(config);
 
   // Handy for debugging from the console.
-  Object.assign(window, { wave: { tf, trainer, chart } });
+  Object.assign(window, { wave: { tf, trainer, accuracyChart, errorChart } });
 }
 
 main().catch((err) => {

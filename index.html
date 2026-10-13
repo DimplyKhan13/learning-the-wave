@@ -31,9 +31,14 @@
               <canvas id="painting" aria-label="The network's current painting"></canvas>
               <span class="step-badge" id="step-badge">step 0</span>
             </div>
-            <figcaption>What the network paints</figcaption>
+            <figcaption id="painting-caption">What the network paints</figcaption>
           </figure>
-          <figure class="panel panel-chart">
+          <figure class="panel panel-chart" id="accuracy-panel">
+            <canvas id="accuracy-chart" aria-label="Share of pixels painted right over time"></canvas>
+            <figcaption>How much it gets right</figcaption>
+          </figure>
+          <!-- The original error chart (MSE, log scale). Shown with ?chart=error. -->
+          <figure class="panel panel-chart" id="error-panel" hidden>
             <canvas id="chart" aria-label="Training error over time"></canvas>
             <figcaption>How wrong it is</figcaption>
           </figure>
@@ -48,6 +53,16 @@
           </div>
         </div>
         <p class="status" id="status">Loading…</p>
+      </section>
+
+      <section class="equation" aria-labelledby="equation-title">
+        <h2 id="equation-title">The equation</h2>
+        <p>The whole network is a single function. A coordinate goes in, a color comes out:</p>
+        <div class="formula" id="formula"></div>
+        <p class="eq-count" id="eq-count"></p>
+        <p id="tiles-intro"></p>
+        <div class="tiles" id="tiles"></div>
+        <p class="hint">Hover over (or touch) the painting to call the function yourself.</p>
       </section>
 
       <footer class="credit">

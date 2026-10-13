@@ -11,8 +11,11 @@ import { PaintingNet, type ModelConfig } from './model';
 export interface TrainerEvents {
   /** Called with the latest error after every frame of training. */
   onLoss(step: number, loss: number): void;
-  /** Called with the network's current painting, shape [H, W, 3]. */
-  onPaint(step: number, image: tf.Tensor3D): Promise<void>;
+  /**
+   * Called with the network's current painting, shape [H, W, 3], and the share
+   * of pixels it paints right (0–1).
+   */
+  onPaint(step: number, image: tf.Tensor3D, accuracy: number): Promise<void>;
   /** Called whenever play/pause state or speed changes. */
   onStatus(status: { running: boolean; step: number; stepsPerSecond: number }): void;
 }
@@ -26,7 +29,8 @@ export class Trainer {
   /** Repaint the network's output every N steps (repainting costs a GPU readback). */
   renderEvery = 10;
 
-  private net: PaintingNet | null = null;
+  /** The network being trained, for anyone who wants to call it (e.g. the hover readout). */
+  net: PaintingNet | null = null;
   private stepsPerFrame = 1;
   private lastPainted = -1;
   private generation = 0; // bumps on restart, so a stale loop knows to stop
@@ -119,11 +123,12 @@ export class Trainer {
   private async paint(): Promise<void> {
     if (!this.net) return;
     const [height, width] = this.pixels.shape;
-    const image = tf.tidy(() => this.net!.predict().reshape([height, width, 3]) as tf.Tensor3D);
+    const { colors, accuracy } = this.net.evaluate();
+    const image = colors.reshape([height, width, 3]) as tf.Tensor3D;
     try {
-      await this.events.onPaint(this.step, image);
+      await this.events.onPaint(this.step, image, (await accuracy.data())[0]);
     } finally {
-      image.dispose();
+      tf.dispose([colors, accuracy, image]);
     }
     this.lastPainted = this.step;
   }

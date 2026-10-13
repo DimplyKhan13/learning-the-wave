@@ -51,6 +51,16 @@ A formula. Numbers in, numbers out.
 
 **[the equation panel]**
 
+> 🤓 **Nerd note: reading the formula**
+> - **`W`** (weights): grids of the `a`s from `y = ax + b`. Multiplying by `W` mixes every input into every output.
+> - **`b`** (biases): the `b`s. A nudge added after each multiply.
+> - **`relu`**: "keep only the positive part". Negative numbers become 0. This tiny bend is what lets stacked layers draw curves instead of one straight line.
+> - **`sigmoid`**: squeezes the final numbers into 0–1, so every output is a valid color.
+> - **`γ(x, y)`**: how we feed in the coordinate. Spoiler: it's circles. We'll get there.
+> - **`B`**: 128 random frequencies, picked once and never trained.
+>
+> Training only ever changes the `W`s and `b`s. That's the 66,307 numbers.
+
 And a picture? Ask it a question: *what color goes at `(x, y)`?* Numbers in, numbers out. So let's make our formula *be* the picture.
 
 **[live demo]**

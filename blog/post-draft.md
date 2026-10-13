@@ -11,7 +11,7 @@ a chain of "ok, but what if…" sections, emoji callouts, real numbers).
 Status per section:
   [approved] Title, subtitle, AI note, intro (up to "Let's build it.")
   [approved] A picture is just a function (image = question; gradient; formula unknown)
-  [review]   A formula with blanks: build f(x, y) step by step (step 1 approved)
+  [review]   A formula with blanks: build f(x, y) step by step (steps 1-2 approved: stencils + palette)
   [draft]    Ok, but how does it learn?
   [draft]    Why is it a blurry mess? (+ hummingbird callback)
   [draft]    Is it actually getting better? (the chart, the drops, failed speedups)
@@ -86,19 +86,20 @@ blue  = a₃·x + b₃·y + c₃
 
 **9 blanks.** That paints a colorful gradient. Still no wave.
 
-**Step 2: gradients of gradients.** Instead of going straight to colors, first make 128 gradients, each with its own `a`, `b` and `c`. Throw away their negative parts. That small bend is what makes this more than a fancier gradient. Then mix those 128 into red, green and blue:
+**Step 2: stencils and a palette.** Make 128 gradients, each with its own `a`, `b` and `c`, pointing in different directions. Then flatten the negative half of each one, and every gradient becomes a *stencil*: nothing on one side, stronger and stronger on the other.
+
+Now give each stencil its own paint: a bit of red, a bit of green, a bit of blue. That's our palette. The picture is all 128 stencils, painted and layered on top of each other.
 
 ```
-h₁   = a·x + b·y + c
-h₂   = a·x + b·y + c
+stencil₁   = keep the positive part of (a·x + b·y + c)
 …
-h₁₂₈ = a·x + b·y + c
-red  = a·h₁ + a·h₂ + … + a·h₁₂₈ + c     (every a and c is its own number)
+stencil₁₂₈ = keep the positive part of (a·x + b·y + c)
+red = a·stencil₁ + a·stencil₂ + … + a·stencil₁₂₈ + c     (each a here is how much red that stencil carries)
 ```
 
-**771 blanks.**
+**771 blanks:** 384 to cut the stencils, 387 for the palette.
 
-**Step 3: stack it.** Do the make-bend-mix step three times in a row, 128 wide each time. **33,795 blanks.** Congratulations: that's a neural network. Every blank is still just an `a`, `b` or `c`.
+**Step 3: stencils cut from stencils.** Before painting, cut 128 new stencils out of the first 128, then do it once more. Each round can carve finer shapes than the last. Three rounds of stencils, then the palette: **33,795 blanks.** Congratulations: that's a neural network. Every blank is still just an `a`, `b` or `c`.
 
 **Step 4: circles instead of `x` and `y`.** Feed it 256 values from spinning circles instead of a plain `x` and `y` (more on that soon). **66,307 blanks.**
 
@@ -108,7 +109,7 @@ Nobody wants to write 66,307 letters, so we pack them: the numbers that multiply
 
 Same formula, just shorter.
 
-> 🤓 **Nerd note:** `relu` is the "throw away the negative part" bend. `sigmoid` squeezes the final numbers into 0–1, so every output is a valid color. `γ(x, y)` is the circles, and `B` holds their 128 random speeds and directions, picked once and never changed.
+> 🤓 **Nerd note:** `relu` is the stencil cutter: it keeps the positive part and flattens the rest. `sigmoid` squeezes the final numbers into 0–1, so every output is a valid color. `γ(x, y)` is the circles, and `B` holds their 128 random speeds and directions, picked once and never changed.
 
 At the start, all 66,307 blanks hold random numbers, so it paints noise. Confident, colorful noise.
 

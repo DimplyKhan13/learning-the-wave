@@ -133,7 +133,7 @@ Filling in the blanks is called training, and it's a very simple game, played a 
 
 1. **Guess.** Paint every pixel.
 2. **Measure.** Compare with the original. How wrong was it, on average?
-3. **Nudge.** Move each of the 66,307 numbers a tiny bit in the direction that makes it less wrong.
+3. **Nudge.** Move each of those numbers a tiny bit in the direction that makes it less wrong.
 4. **Repeat.**
 
 No rules about waves or mountains anywhere. Just *guess, measure, nudge, repeat*.

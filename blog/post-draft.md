@@ -23,6 +23,10 @@ Status per section:
 
 [ARTHUR: …] marks something only Arthur can supply.
 
+Interactive pieces to design later:
+  - a, b, c sliders for the gradient in "A picture is just a function"
+  - "Add waves one by one" animation (network vs. plain sum)
+
 Open questions: tone of the drafted sections; AI transparency line at the top
 (yes/no); "Add waves one by one" animation for the slider.
 Every number below was measured in this project; don't add any that weren't.
@@ -54,7 +58,7 @@ And functions can be written down. Here's one:
 
 Pick numbers for `a`, `b` and `c`, ask it about every pixel, and it paints this:
 
-**[small image: a gradient]**
+**[interactive: sliders for `a`, `b` and `c` painting the gradient live. To design later]**
 
 That's our old friend `y = ax + b` from school, with one more input. Change the numbers and the gradient tilts and shifts.
 

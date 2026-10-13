@@ -11,7 +11,7 @@ a chain of "ok, but what if…" sections, emoji callouts, real numbers).
 Status per section:
   [approved] Title, subtitle, AI note, intro (up to "Let's build it.")
   [approved] A picture is just a function (image = question; gradient; formula unknown)
-  [approved] A formula with blanks (equation panel + nerd note + demo)
+  [review]   A formula with blanks: build f(x, y) step by step (step 1 approved)
   [draft]    Ok, but how does it learn?
   [draft]    Why is it a blurry mess? (+ hummingbird callback)
   [draft]    Is it actually getting better? (the chart, the drops, failed speedups)
@@ -70,21 +70,47 @@ That's the job we're giving the AI.
 
 ## A formula with blanks
 
-A neural network is a big, flexible formula with the numbers left blank: lots of those gradients at once, bent and stacked a few layers deep. (Spoiler: AI is math.) Ours has 66,307 blanks.
+Let's write down what we're looking for:
+
+`f(x, y) = (r, g, b)`
+
+A position goes in, three numbers come out: how much red, green and blue.
+
+**Step 1: one gradient per color.** The simplest version gives each color its own gradient:
+
+```
+red   = a₁·x + b₁·y + c₁
+green = a₂·x + b₂·y + c₂
+blue  = a₃·x + b₃·y + c₃
+```
+
+**9 blanks.** That paints a colorful gradient. Still no wave.
+
+**Step 2: gradients of gradients.** Instead of going straight to colors, first make 128 gradients, each with its own `a`, `b` and `c`. Throw away their negative parts. That small bend is what makes this more than a fancier gradient. Then mix those 128 into red, green and blue:
+
+```
+h₁   = a·x + b·y + c
+h₂   = a·x + b·y + c
+…
+h₁₂₈ = a·x + b·y + c
+red  = a·h₁ + a·h₂ + … + a·h₁₂₈ + c     (every a and c is its own number)
+```
+
+**771 blanks.**
+
+**Step 3: stack it.** Do the make-bend-mix step three times in a row, 128 wide each time. **33,795 blanks.** Congratulations: that's a neural network. Every blank is still just an `a`, `b` or `c`.
+
+**Step 4: circles instead of `x` and `y`.** Feed it 256 values from spinning circles instead of a plain `x` and `y` (more on that soon). **66,307 blanks.**
+
+Nobody wants to write 66,307 letters, so we pack them: the numbers that multiply go into grids called `W` (weights), and the ones that get added are called `b` (biases). Yes, `b` again. Sorry, mathematicians.
 
 **[the equation panel]**
 
-> 🤓 **Nerd note: reading the formula**
-> - **`W`** (weights): grids of the `a`s from `y = ax + b`. Multiplying by `W` mixes every input into every output.
-> - **`b`** (biases): the `b`s. A nudge added after each multiply.
-> - **`relu`**: "keep only the positive part". Negative numbers become 0. This tiny bend is what lets stacked layers paint more than a flat gradient.
-> - **`sigmoid`**: squeezes the final numbers into 0–1, so every output is a valid color.
-> - **`γ(x, y)`**: how we feed in the coordinate. Spoiler: it's circles. We'll get there.
-> - **`B`**: 128 random frequencies, picked once and never changed.
->
-> The blanks are the `W`s and `b`s: 66,307 numbers.
+Same formula, just shorter.
 
-At the start the blanks are filled with random numbers, so it paints noise. Confident, colorful noise.
+> 🤓 **Nerd note:** `relu` is the "throw away the negative part" bend. `sigmoid` squeezes the final numbers into 0–1, so every output is a valid color. `γ(x, y)` is the circles, and `B` holds their 128 random speeds and directions, picked once and never changed.
+
+At the start, all 66,307 blanks hold random numbers, so it paints noise. Confident, colorful noise.
 
 **[live demo]**
 

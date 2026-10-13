@@ -16,11 +16,11 @@
         <h1>The Great Wave</h1>
         <p class="lede">
           This network never sees the picture. It gets a coordinate <code>(x, y)</code>, guesses a color, and is
-          told how wrong it was. Watch it learn, live, on your device.
+          told how wrong it was. Watch it learn, live, on your device, then scroll down for how it works.
         </p>
       </header>
 
-      <section class="demo" aria-label="Live demo">
+      <section class="demo" id="demo" aria-label="Live demo">
         <div class="panels">
           <figure class="panel">
             <img id="original" alt="The Great Wave off Kanagawa, Katsushika Hokusai" />
@@ -56,63 +56,222 @@
         <p class="status" id="milestones"></p>
       </section>
 
-      <section class="equation" aria-labelledby="equation-title">
-        <h2 id="equation-title">The equation</h2>
-        <p>The whole network is a single function. A coordinate goes in, a color comes out:</p>
-        <div class="formula" id="formula"></div>
-        <p class="eq-count" id="eq-count"></p>
-        <p id="tiles-intro"></p>
-        <div class="tiles" id="tiles"></div>
-        <p class="hint">Hover over (or touch) the painting to call the function yourself.</p>
-        <div class="waves-control" id="waves-control">
+      <article class="prose">
+        <h2 id="idea">A network that never sees the picture</h2>
+        <p>
+          The demo above is training a neural network from scratch, in this tab, on your device. It's learning to paint
+          <em>The Great Wave off Kanagawa</em>. It is never shown the picture. Not once.
+        </p>
+        <p>
+          What it gets is much less: a position on the canvas, and after each attempt, one number saying how wrong it
+          was overall. From that alone it works out the wave, the boats and Mount Fuji in the distance.
+        </p>
+
+        <h2>A coordinate in, a color out</h2>
+        <p>
+          Every pixel is a question. Take the point <code>(x, y)</code>, both running from −1 to 1, and answer with a
+          color <code>(r, g, b)</code>. The image is 128 × 85, so that's 10,880 questions, asked all at once.
+        </p>
+        <p>
+          The important part: the network doesn't store 10,880 colors. It's <strong>one function</strong>,
+          <code>f(x, y) → color</code>, built from 66,307 adjustable numbers. Every change to those numbers changes
+          the whole picture at once. That's why it starts as a smooth smear and sharpens everywhere together, instead
+          of filling in pixel by pixel.
+        </p>
+
+        <div class="interactive equation" aria-labelledby="equation-title">
+          <h3 id="equation-title">The equation</h3>
+          <p>Here is that function, written out. A coordinate goes in, a color comes out:</p>
+          <div class="formula" id="formula"></div>
+          <p class="eq-count" id="eq-count"></p>
+          <p id="tiles-intro"></p>
+          <div class="tiles" id="tiles"></div>
+          <p class="hint">Hover over (or touch) the painting at the top to call the function yourself.</p>
+        </div>
+
+        <h2>What "training" actually means</h2>
+        <p>Training is a loop with four steps:</p>
+        <ol>
+          <li><strong>Guess.</strong> Paint every pixel with the current numbers.</li>
+          <li>
+            <strong>Measure.</strong> Compare with the original: the average of the squared differences (mean squared
+            error).
+          </li>
+          <li>
+            <strong>Nudge.</strong> For each of the 66,307 numbers, work out which direction makes the error smaller,
+            and move it a little (the Adam optimizer, step size 0.001).
+          </li>
+          <li><strong>Repeat.</strong></li>
+        </ol>
+        <p>
+          That's all. No rules about waves or mountains anywhere. The whole model is about 180 lines of TypeScript.
+        </p>
+
+        <h2>Why it gets stuck in a blur</h2>
+        <p>
+          Give a plain network the raw <code>(x, y)</code> and it learns the broad strokes, then stalls. Neural
+          networks are biased towards smooth functions (it's called <em>spectral bias</em>), and the sharp edges of a
+          woodblock print are the opposite of smooth. Switch the demo to <a href="#demo">Without</a> and watch it
+          plateau. In my runs it sat around 19 dB PSNR after 3,000 steps; with the fix below it passes 40 dB in about
+          1,000.
+        </p>
+        <p>
+          The fix is <strong>Fourier features</strong> (Tancik et al., 2020). Instead of handing the network
+          <code>(x, y)</code>, project the coordinate onto 128 random sine waves at different angles and speeds, and
+          give it the sine and cosine of each: 256 numbers per pixel instead of 2. Those are the striped tiles in the
+          equation above. Fine detail is now a matter of combining stripes.
+        </p>
+        <p>
+          You might expect the painting to be a sum of those waves, like a Fourier series. It isn't, and you can see
+          it here: hide the fastest waves and the picture turns grainy, not blurry. I also built a true Fourier series
+          from the same number of waves; even with all of them it's a soft blob. The network gets a sharp print out of
+          the same stripes because it mixes them through its layers instead of adding them up.
+        </p>
+        <div class="interactive waves-control" id="waves-control">
           <label for="waves">Waves the network can see: <strong id="waves-value"></strong></label>
           <input id="waves" type="range" min="1" step="1" />
-          <p class="hint">
-            Slide left to hide the fastest waves from the network. It doesn't fade into a smooth blur like a classic
-            Fourier series; it turns grainy, because the network mixes the waves instead of adding them up.
-          </p>
+          <p class="hint">Slide left to hide the fastest waves from the network (training still uses all of them).</p>
         </div>
-      </section>
 
-      <section class="morph" aria-labelledby="morph-title">
-        <h2 id="morph-title">One function, two prints</h2>
+        <h2>The chart is a monitoring dashboard</h2>
         <p>
-          Add one more input, <code>t</code>, and the same kind of network learns two pictures at once: the Great Wave
-          at <code>t = 0</code>, Red Fuji at <code>t = 1</code>. It never sees anything in between, so whatever it
-          paints there is its own guess.
+          The chart is the part I care about most. Without that number the loop has nothing to follow. Same as in
+          production: if you can't measure the error, nothing gets better.
         </p>
-        <div class="morph-panels">
-          <figure class="panel">
-            <img id="wave-small" alt="The Great Wave off Kanagawa" />
-            <figcaption>t = 0</figcaption>
-          </figure>
-          <figure class="panel">
-            <div class="painting">
-              <canvas id="morph-painting" aria-label="The network's painting at the chosen t"></canvas>
-              <span class="step-badge" id="morph-badge">step 0</span>
-            </div>
-            <figcaption>f(x, y, t) at t = <span id="morph-t-value">0.00</span></figcaption>
-          </figure>
-          <figure class="panel">
-            <img id="fuji" alt="Fine Wind, Clear Morning (Red Fuji), Katsushika Hokusai" />
-            <figcaption>t = 1</figcaption>
-          </figure>
+        <p>
+          Which number turned out to matter too. I started with the raw error on a log scale: precise, but only
+          readable if you're used to log axes. So I switched to something anyone can read, the share of pixels painted
+          right. Then came the definition of "right". With a ±5% tolerance per color channel, my laptop reached 99% in
+          965 steps (33 seconds) and the chart went flat while the picture was still getting sharper. At ±1% (about
+          ±2.5 levels out of 255) it keeps climbing for thousands of steps. Same model, same run, a different story
+          depending on the threshold. Pick one that still moves when the thing you care about moves.
+        </p>
+        <p class="hint">The raw error chart is still there: add <code>?chart=error</code> to the address.</p>
+
+        <h2>Running on your device</h2>
+        <p>
+          No GPU server, no Python: a static page and TensorFlow.js. Your device does all the work, which meant I had
+          to care about your device:
+        </p>
+        <ul>
+          <li>
+            <strong>A frame budget.</strong> The loop runs as many steps as fit in about 30 ms, then hands control back
+            so the page stays responsive.
+          </li>
+          <li>
+            <strong>Paint every 10 steps, not every step.</strong> Reading pixels back from the GPU is the slow part.
+          </li>
+          <li>
+            <strong>Pause when the tab is hidden</strong> (Page Visibility API). Nobody's watching; don't burn the
+            battery.
+          </li>
+          <li>
+            <strong>Free GPU memory.</strong> Every intermediate tensor is disposed, so memory stays flat however long it
+            runs.
+          </li>
+        </ul>
+
+        <h3>The bug that only showed up on a real GPU</h3>
+        <p>
+          The first run on my laptop (an RTX 3050, in Chrome) learned about four times slower per step than the same
+          code on a CPU: half the pixels right at step ~600 instead of ~160.
+        </p>
+        <p>
+          Rather than guess, I built a check into the page (the <em>Run diagnostics</em> button at the bottom): a short
+          training run with a fixed seed, whose error after steps 1, 2, 5… 100 is compared number by number against a
+          reference run on the CPU. On WebGL the error after 100 steps was 5× the reference. On WebGPU, same GPU and
+          same code, it matched within 0.2% and ran 3× faster: 28 ms per step instead of 86.
+        </p>
+        <p>
+          So the page now uses WebGPU first, and falls back to WebGL, WebAssembly and plain CPU in that order. When
+          "works on my machine" stops being true, compare against a known-good reference and find the first number
+          that diverges.
+        </p>
+
+        <h2>One function, two prints</h2>
+        <p>
+          Add one more input, <code>t</code>, and the same kind of network learns two pictures: The Great Wave at
+          <code>t = 0</code>, Red Fuji at <code>t = 1</code>. It's only ever trained on those two values. Ask for
+          anything in between and it has to make something up.
+        </p>
+        <p>
+          I hoped for a morph, the wave rising into the mountain. What it paints is closer to a double exposure: both
+          prints overlaid and grainy, the sky turning blue before the wave fades. Nothing in the training says what
+          "in between" should look like, so this is what the function happens to do there.
+        </p>
+        <p>
+          To make it playful, type a four-letter word. A small rule, not the network, turns it into <code>t</code>
+          letter by letter: each letter lands between the WAVE letter and the FUJI letter in the same position, by
+          distance in the alphabet. WEVE gives 0.05, FERI gives 0.63. Text in, a number out, a picture out: a toy
+          version of how text-to-image models are wired, minus everything that makes them good.
+        </p>
+
+        <div class="interactive morph" aria-labelledby="morph-title">
+          <h3 id="morph-title">Try it: f(x, y, t)</h3>
+          <div class="morph-panels">
+            <figure class="panel">
+              <img id="wave-small" alt="The Great Wave off Kanagawa" />
+              <figcaption>t = 0</figcaption>
+            </figure>
+            <figure class="panel">
+              <div class="painting">
+                <canvas id="morph-painting" aria-label="The network's painting at the chosen t"></canvas>
+                <span class="step-badge" id="morph-badge">step 0</span>
+              </div>
+              <figcaption>f(x, y, t) at t = <span id="morph-t-value">0.00</span></figcaption>
+            </figure>
+            <figure class="panel">
+              <img id="fuji" alt="Fine Wind, Clear Morning (Red Fuji), Katsushika Hokusai" />
+              <figcaption>t = 1</figcaption>
+            </figure>
+          </div>
+          <div class="controls">
+            <button id="morph-play" class="primary" type="button" disabled>Train</button>
+          </div>
+          <p class="status" id="morph-status"></p>
+          <div class="word-control">
+            <label for="morph-word">Type a four-letter word</label>
+            <input id="morph-word" type="text" maxlength="4" placeholder="WEVE" autocomplete="off" spellcheck="false" />
+            <!-- One line: this paragraph keeps line breaks for the per-letter breakdown. -->
+            <p class="hint" id="morph-word-explain">WAVE is the wave, FUJI is the mountain, anything else lands in between. Train first for a few thousand steps.</p>
+          </div>
+          <input id="morph-t" class="morph-slider" type="range" min="0" max="1" step="0.01" value="0" aria-label="t" />
         </div>
-        <div class="word-control">
-          <label for="morph-word">Type a four-letter word</label>
-          <input id="morph-word" type="text" maxlength="4" placeholder="WEVE" autocomplete="off" spellcheck="false" />
-          <p class="hint" id="morph-word-explain">
-            WAVE is the wave, FUJI is the mountain, anything else lands in between: each letter counts by how close
-            it is in the alphabet to the WAVE or the FUJI letter. The network doesn't read the word; a small rule
-            turns it into the number t.
-          </p>
-        </div>
-        <input id="morph-t" class="morph-slider" type="range" min="0" max="1" step="0.01" value="0" aria-label="t" />
-        <div class="controls">
-          <button id="morph-play" class="primary" type="button" disabled>Train</button>
-        </div>
-        <p class="status" id="morph-status"></p>
-      </section>
+
+        <h2>Is this compression?</h2>
+        <p>
+          The function can repaint the whole print, so is it a compressed image? Not here. Stored as 32-bit floats, the
+          network's 66,307 numbers take 259 KB. The PNG it learned from is 27.5 KB, and a JPEG at quality 75 is 3.7 KB.
+          Research on this idea (COIN, Dupont et al., 2021) gets competitive with JPEG at low bitrates using much
+          smaller networks and quantized weights, but at 128 × 85 pixels a JPEG is hard to beat.
+        </p>
+        <p>
+          What you do get is an image that is a continuous function. The readout under the painting gives the color at
+          any point you point at, including between pixels, at a resolution that never existed.
+        </p>
+
+        <h2>What didn't work</h2>
+        <p>Two standard tricks, measured on a CPU with the ±1% threshold:</p>
+        <ul>
+          <li>
+            <strong>Shrinking the step size over time.</strong> Worse every way I scheduled it. Shrinking from the
+            start: 45% of pixels right at step 3,000, against 93% with a constant step. Shrinking late (from step 1,500
+            or 2,000): 90–91% at step 4,000, against 96%.
+          </li>
+          <li>
+            <strong>Coarse-to-fine</strong>, unlocking the waves from slow to fast. It ends up in the same place (94.3%
+            vs 93.0% at step 3,000) and gets going more slowly. It's in the code, switched off.
+          </li>
+        </ul>
+        <p>The plain setup won: a constant step size, all the waves from step one.</p>
+
+        <h2>Code and credits</h2>
+        <p>
+          The code is on GitHub:
+          <a href="https://github.com/dimplykhan13/learning-the-wave">github.com/dimplykhan13/learning-the-wave</a>.
+          TypeScript, Vite and TensorFlow.js, with the charts drawn by hand on a <code>&lt;canvas&gt;</code>.
+        </p>
+      </article>
 
       <footer class="credit">
         <p>

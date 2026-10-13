@@ -266,10 +266,6 @@ button.primary {
 
 /* ---------- the equation ---------- */
 
-.equation {
-  margin-top: 40px;
-  max-width: 820px;
-}
 
 h2 {
   margin: 0 0 8px;
@@ -408,14 +404,6 @@ input[type='range'] {
 
 /* ---------- one function, two prints ---------- */
 
-.morph {
-  margin-top: 48px;
-  max-width: 1100px;
-}
-
-.morph > p {
-  max-width: 680px;
-}
 
 .morph-panels {
   display: grid;
@@ -485,4 +473,57 @@ input[type='range'] {
   font-family: var(--font-mono);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
+}
+
+/* ---------- the article ---------- */
+
+.prose {
+  max-width: 740px;
+  margin-top: 56px;
+}
+
+.prose h2 {
+  margin: 48px 0 12px;
+}
+
+.prose h3 {
+  margin: 28px 0 8px;
+  font-size: 19px;
+}
+
+.prose p,
+.prose li {
+  line-height: 1.7;
+}
+
+.prose ol,
+.prose ul {
+  padding-left: 1.4em;
+}
+
+.prose li + li {
+  margin-top: 6px;
+}
+
+.prose a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+}
+
+/* Live pieces embedded in the text. */
+.interactive {
+  margin: 24px 0;
+  padding: 16px;
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.interactive h3 {
+  margin-top: 0;
+}
+
+.interactive .formula,
+.interactive .panel {
+  background: var(--surface);
 }

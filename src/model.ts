@@ -92,7 +92,10 @@ export class PaintingNet {
   readonly B: tf.Tensor2D | null;
   /** How many numbers training gets to adjust (all weights and biases). */
   readonly parameterCount: number;
-  private readonly inputs: tf.Tensor2D; // encoded coordinates, computed once
+  /** How many pictures this one function paints; picture i is at t = i / (frames - 1). */
+  readonly frames: number;
+  private readonly encoded: tf.Tensor2D; // γ(x, y) for every pixel, computed once
+  private readonly inputs: tf.Tensor2D; // what training feeds in: γ(x, y), plus t when there are several pictures
   private readonly target: tf.Tensor2D; // the real colors, in [0, 1]
   private readonly params: tf.Variable[] = [];
   private readonly optimizer: tf.Optimizer;
@@ -102,17 +105,26 @@ export class PaintingNet {
   /** Per-feature weights in [0, 1] while frequencies are being unlocked; null when all are on. */
   private frequencyMask: tf.Tensor2D | null = null;
 
-  /** @param pixels the original image, shape [H, W, 3], values in [0, 1]. */
-  constructor(pixels: tf.Tensor3D, config: ModelConfig) {
+  /**
+   * @param images the picture to learn, shape [H, W, 3] with values in [0, 1];
+   *   or several same-size pictures, to learn color = f(x, y, t) with picture i at t = i / (n - 1).
+   */
+  constructor(images: tf.Tensor3D | tf.Tensor3D[], config: ModelConfig) {
     this.config = config;
-    const [height, width] = pixels.shape;
-    this.target = pixels.reshape([height * width, 3]) as tf.Tensor2D;
+    const pictures = Array.isArray(images) ? images : [images];
+    this.frames = pictures.length;
+    const [height, width] = pictures[0].shape;
+    this.target = tf.tidy(() => tf.concat(pictures.map((p) => p.reshape([height * width, 3]))) as tf.Tensor2D);
 
     // The input never changes, so encode it once instead of on every step.
     this.B = config.fourier
       ? tf.randomNormal<tf.Rank.R2>([2, config.frequencies], 0, config.sigma, 'float32', config.seed)
       : null;
-    this.inputs = tf.tidy(() => this.encode(pixelCoordinates(width, height)));
+    this.encoded = tf.tidy(() => this.encode(pixelCoordinates(width, height)));
+    this.inputs =
+      this.frames === 1
+        ? this.encoded
+        : tf.tidy(() => tf.concat(pictures.map((_, i) => this.withTime(this.encoded, i / (this.frames - 1)))));
 
     // A stack of dense layers: ReLU in the middle, 3 outputs (r, g, b) at the end.
     const sizes = [this.inputs.shape[1], ...Array(config.hiddenLayers).fill(config.hiddenUnits), 3];
@@ -171,6 +183,12 @@ export class PaintingNet {
     return this.B ? fourierFeatures(coords, this.B) : coords.clone();
   }
 
+  /** Append t as one more input column (only when learning several pictures). */
+  private withTime(encoded: tf.Tensor2D, t: number): tf.Tensor2D {
+    if (this.frames === 1) return encoded;
+    return tf.concat([encoded, tf.fill([encoded.shape[0], 1], t)], 1) as tf.Tensor2D;
+  }
+
   /** The function itself: encoded coordinates in, colors out. */
   private forward(inputs: tf.Tensor2D): tf.Tensor2D {
     return tf.tidy(() => {
@@ -183,9 +201,15 @@ export class PaintingNet {
     });
   }
 
-  /** The network's painting: one color per pixel, shape [H*W, 3], values in [0, 1]. */
+  /** Everything training compares against the originals: every pixel of every picture. */
   predict(): tf.Tensor2D {
     return this.forward(this.inputs);
+  }
+
+  /** The network's painting at t (any value, not just the trained ones): shape [H*W, 3], values in [0, 1]. */
+  paint(t = 0): tf.Tensor2D {
+    if (this.frames === 1) return this.predict();
+    return tf.tidy(() => this.forward(this.withTime(this.encoded, t)));
   }
 
   /** Paint and score in one pass: the colors plus the share of pixels painted right. */
@@ -207,8 +231,8 @@ export class PaintingNet {
   }
 
   /** Call the function at any point, even between pixels. Returns [r, g, b] in [0, 1]. */
-  colorAt(x: number, y: number): tf.Tensor1D {
-    return tf.tidy(() => this.forward(this.encode(tf.tensor2d([[x, y]]))).squeeze() as tf.Tensor1D);
+  colorAt(x: number, y: number, t = 0): tf.Tensor1D {
+    return tf.tidy(() => this.forward(this.withTime(this.encode(tf.tensor2d([[x, y]])), t)).squeeze() as tf.Tensor1D);
   }
 
   /**
@@ -225,7 +249,7 @@ export class PaintingNet {
   }
 
   dispose(): void {
-    tf.dispose([this.inputs, this.target, ...this.params]);
+    tf.dispose([this.encoded, this.inputs, this.target, ...this.params]);
     this.B?.dispose();
     this.frequencyMask?.dispose();
     this.optimizer.dispose();

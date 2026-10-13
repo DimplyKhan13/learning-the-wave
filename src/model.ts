@@ -51,10 +51,21 @@ export function pixelCoordinates(width: number, height: number): tf.Tensor2D {
  * sine waves hands it high frequencies for free, and detail becomes learnable.
  */
 export function fourierFeatures(coords: tf.Tensor2D, B: tf.Tensor2D): tf.Tensor2D {
-  return tf.tidy(() => {
-    const projected = coords.matMul(B).mul(2 * Math.PI);
-    return tf.concat([projected.sin(), projected.cos()], 1) as tf.Tensor2D;
-  });
+  // Computed on the CPU in double precision, not on the GPU: 2πBv reaches a few
+  // hundred radians, where GPU sin() is only approximate, and that quietly
+  // blurs the finest detail. The input never changes, so this runs once.
+  const [n, m] = [coords.shape[0], B.shape[1]];
+  const v = coords.dataSync();
+  const b = B.dataSync();
+  const out = new Float32Array(n * 2 * m);
+  for (let i = 0; i < n; i++) {
+    for (let k = 0; k < m; k++) {
+      const angle = 2 * Math.PI * (v[2 * i] * b[k] + v[2 * i + 1] * b[m + k]);
+      out[i * 2 * m + k] = Math.sin(angle);
+      out[i * 2 * m + m + k] = Math.cos(angle);
+    }
+  }
+  return tf.tensor2d(out, [n, 2 * m]);
 }
 
 /** A pixel counts as "painted right" when every channel is within 5% of the original. */

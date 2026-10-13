@@ -57,6 +57,18 @@ async function pickBackend(): Promise<string> {
   throw new Error('no TensorFlow.js backend available');
 }
 
+/** Which GPU is doing the work and at what precision, so slow or odd runs can be diagnosed. */
+function gpuInfo(): string {
+  const gl = (tf.backend() as unknown as { gpgpu?: { gl: WebGLRenderingContext } }).gpgpu?.gl;
+  if (!gl) return '';
+  const ext = gl.getExtension('WEBGL_debug_renderer_info');
+  const name = String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
+  // "ANGLE (Vendor, Model Direct3D11 ...)" -> "Model"
+  const model = name.match(/^ANGLE \([^,]+, ([^,]+?)(?: Direct3D| OpenGL| Metal|,)/)?.[1] ?? name;
+  const precision = tf.env().getBool('WEBGL_RENDER_FLOAT32_ENABLED') ? 'float32' : 'float16';
+  return `${model.slice(0, 48)}, ${precision}`;
+}
+
 async function loadImage(url: string): Promise<HTMLImageElement> {
   original.src = url;
   await original.decode();
@@ -65,6 +77,7 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
 
 async function main(): Promise<void> {
   const backend = await pickBackend();
+  const device = backend === 'webgl' ? gpuInfo() : '';
   const image = await loadImage(IMAGE_URL);
   painting.width = image.naturalWidth;
   painting.height = image.naturalHeight;
@@ -112,7 +125,7 @@ async function main(): Promise<void> {
     onStatus({ running, step, stepsPerSecond }) {
       playButton.textContent = running ? 'Pause' : step === 0 ? 'Play' : 'Resume';
       const parts = [
-        backend.toUpperCase(),
+        device ? `${backend.toUpperCase()} (${device})` : backend.toUpperCase(),
         stepsPerSecond ? `${stepsPerSecond.toFixed(0)} steps/s` : '',
         `step ${step.toLocaleString('en-US')}`,
         Number.isFinite(lastLoss) ? `PSNR ${psnr(lastLoss).toFixed(1)} dB` : '',

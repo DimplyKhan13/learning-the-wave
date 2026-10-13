@@ -43,27 +43,19 @@ Let's build it.
 
 ## A picture is just a function
 
-Before we build anything, let's get one thing out of the way: AI is math. Not magic, not a tiny brain in a box. Math.
+First, the spoiler: AI is math.
 
-Remember `y = ax + b` from school? Put in an `x`, multiply it by `a`, add `b`, and out comes a `y`. Change `a` and `b` and you get a different line.
+Remember `y = ax + b`? A neural network is that, stacked: multiply, add, repeat. Ours has 66,307 `a`s and `b`s instead of two, and training is the hunt for good values.
 
-A neural network is that idea, stacked. Multiply, add, keep only the positive part, then do it again a few times. That's it. Ours has 66,307 of those `a`s and `b`s instead of two, and "training" is just the hunt for good values for them.
+A formula. Numbers in, numbers out.
 
-So a neural network is a formula. A very long one, but a formula: numbers in, numbers out.
+**[the equation panel]**
 
-**[the equation panel: our whole network, written out]**
-
-Now the trick this whole project rests on.
-
-A picture is a grid of pixels. But we can also treat it as a question we ask over and over: *what color goes here?*
-
-Give it `(x, y)`, get back `(r, g, b)`.
-
-Numbers in, numbers out. Sounds like a job for a formula. So instead of storing 10,880 colors, we ask our formula to *be* the picture. A coordinate goes in, a color comes out. That's the whole model.
+And a picture? Ask it a question: *what color goes at `(x, y)`?* Numbers in, numbers out. So let's make our formula *be* the picture.
 
 **[live demo]**
 
-> 👽 **Fun fact:** the network isn't adjusting pixels. It's adjusting one formula that paints all of them. That's why the whole picture sharpens at once instead of filling in line by line.
+> 👽 **Fun fact:** it isn't adjusting pixels. It's adjusting one formula that paints all of them. That's why the whole picture sharpens at once.
 
 ## Ok, but how does it learn?
 

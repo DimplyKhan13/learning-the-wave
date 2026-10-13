@@ -138,6 +138,11 @@ export class PaintingNet {
     });
   }
 
+  /** Mean of the encoded input; lets diagnostics check every backend gets identical numbers. */
+  inputMean(): tf.Scalar {
+    return this.inputs.mean();
+  }
+
   /** Call the function at any point, even between pixels. Returns [r, g, b] in [0, 1]. */
   colorAt(x: number, y: number): tf.Tensor1D {
     return tf.tidy(() => this.forward(this.encode(tf.tensor2d([[x, y]]))).squeeze() as tf.Tensor1D);

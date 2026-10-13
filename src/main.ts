@@ -6,6 +6,8 @@ import { DEFAULT_CONFIG, PIXEL_TOLERANCE, psnr, type ModelConfig } from './model
 import { MetricChart } from './chart';
 import { drawTiles, formulaHtml, inputTiles } from './equation';
 import { Trainer } from './trainer';
+import { diagnose, type Report } from './diagnose';
+import reference from './diagnose-reference.json';
 // Bundle the WASM fallback with the site instead of fetching it from a CDN.
 import wasmPlain from '@tensorflow/tfjs-backend-wasm/dist/tfjs-backend-wasm.wasm?url';
 import wasmSimd from '@tensorflow/tfjs-backend-wasm/dist/tfjs-backend-wasm-simd.wasm?url';
@@ -90,6 +92,15 @@ async function main(): Promise<void> {
   const base: ModelConfig =
     backend === 'webgl' ? DEFAULT_CONFIG : { ...DEFAULT_CONFIG, frequencies: 64, hiddenLayers: 2, hiddenUnits: 64 };
   let config = base;
+
+  // ?diagnose=1: run the seeded check from scripts/diagnose.mts here and compare.
+  if (params.has('diagnose')) {
+    status.textContent = `Running diagnostics on ${backend}${device ? ` (${device})` : ''}…`;
+    const report = await diagnose(pixels, DEFAULT_CONFIG);
+    showDiagnostics(report, device);
+    status.textContent = 'Diagnostics done. Reload without ?diagnose=1 to train.';
+    return;
+  }
 
   // Main chart: share of pixels painted right. The log-scale error chart is
   // kept, hidden; `?chart=error` swaps it back in.
@@ -194,11 +205,50 @@ async function main(): Promise<void> {
     });
   }
 
+  // Same check as ?diagnose=1, from a button (the URL may not reach an embedded page).
+  const diagnoseButton = $<HTMLButtonElement>('diagnose');
+  diagnoseButton.addEventListener('click', async () => {
+    trainer.pause();
+    diagnoseButton.disabled = true;
+    diagnoseButton.textContent = 'Running diagnostics…';
+    document.querySelector('.diagnose')?.remove();
+    showDiagnostics(await diagnose(pixels, DEFAULT_CONFIG), device);
+    diagnoseButton.textContent = 'Run diagnostics';
+    diagnoseButton.disabled = false;
+  });
+
   playButton.disabled = restartButton.disabled = false;
   await start(config);
 
   // Handy for debugging from the console.
   Object.assign(window, { wave: { tf, trainer, accuracyChart, errorChart } });
+}
+
+function showDiagnostics(report: Report, device: string): void {
+  const ref = reference as Report;
+  const fmt = (v: number) => v.toPrecision(4);
+  const diff = (a: number, b: number) => {
+    const pct = (Math.abs(a - b) / Math.max(Math.abs(b), 1e-9)) * 100;
+    return `<td class="${pct > 5 ? 'bad' : 'ok'}">${pct.toFixed(1)}%</td>`;
+  };
+  const rows: string[] = [];
+  report.targetMean.forEach((v, i) =>
+    rows.push(`<tr><td>target mean ${'RGB'[i]}</td><td>${fmt(v)}</td><td>${fmt(ref.targetMean[i])}</td>${diff(v, ref.targetMean[i])}</tr>`),
+  );
+  rows.push(`<tr><td>input mean</td><td>${fmt(report.inputMean)}</td><td>${fmt(ref.inputMean)}</td><td></td></tr>`);
+  for (const [step, v] of Object.entries(report.losses)) {
+    const r = ref.losses[Number(step)];
+    rows.push(`<tr><td>error after step ${step}</td><td>${fmt(v)}</td><td>${fmt(r)}</td>${diff(v, r)}</tr>`);
+  }
+  rows.push(`<tr><td>ms/step, waiting each step</td><td>${report.msPerStepSynced.toFixed(1)}</td><td>${ref.msPerStepSynced.toFixed(1)}</td><td></td></tr>`);
+  rows.push(`<tr><td>ms/step, 50 queued</td><td>${report.msPerStepQueued.toFixed(1)}</td><td>${ref.msPerStepQueued.toFixed(1)}</td><td></td></tr>`);
+  const section = document.createElement('section');
+  section.className = 'diagnose';
+  section.innerHTML = `<h2>Diagnostics</h2>
+    <p>This device: ${report.backend}${device ? ` (${device})` : ''} · ${navigator.userAgent}</p>
+    <table><thead><tr><th></th><th>this device</th><th>reference (tfjs-node, CPU)</th><th>difference</th></tr></thead>
+    <tbody>${rows.join('')}</tbody></table>`;
+  document.querySelector('.demo')!.after(section);
 }
 
 main().catch((err) => {

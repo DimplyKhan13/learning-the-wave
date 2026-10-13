@@ -101,6 +101,12 @@ red = a·stencil₁ + a·stencil₂ + … + a·stencil₁₂₈ + c     (each a 
 
 **Step 3: stencils cut from stencils.** Before painting, cut 128 new stencils out of the first 128, then do it once more. Each round can carve finer shapes than the last. Three rounds of stencils, then the palette: **33,795 blanks.** Congratulations: that's a neural network.
 
+If you've ever seen this diagram, you can read it now:
+
+![Our network as a node diagram: x and y in, three columns of 128 stencils, r, g and b out](network-diagram.svg)
+
+Every circle in the middle is a stencil. Every line is one blank.
+
 It's hard to see what all those blanks are doing together. That's why we just call it AI.
 
 AI is just math.

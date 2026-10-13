@@ -1,0 +1,141 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 420" font-family="system-ui, sans-serif">
+<style>.l{stroke:#1f4e8c;stroke-opacity:.18;stroke-width:1}.n{fill:#fffdf8;stroke:#1f4e8c;stroke-width:2}.io{fill:#1f4e8c}.t{fill:#1d2433;font-size:15px;text-anchor:middle}.m{fill:#6b7180;font-size:13px;text-anchor:middle}.w{fill:#fff;font-size:15px;font-weight:700;text-anchor:middle;dominant-baseline:central}</style>
+<rect width="760" height="420" fill="#f6f1e7"/>
+<line class="l" x1="90" y1="150.0" x2="250" y2="95.0"/>
+<line class="l" x1="90" y1="150.0" x2="250" y2="145.0"/>
+<line class="l" x1="90" y1="150.0" x2="250" y2="195.0"/>
+<line class="l" x1="90" y1="150.0" x2="250" y2="245.0"/>
+<line class="l" x1="90" y1="150.0" x2="250" y2="295.0"/>
+<line class="l" x1="90" y1="150.0" x2="250" y2="345.0"/>
+<line class="l" x1="90" y1="290.0" x2="250" y2="95.0"/>
+<line class="l" x1="90" y1="290.0" x2="250" y2="145.0"/>
+<line class="l" x1="90" y1="290.0" x2="250" y2="195.0"/>
+<line class="l" x1="90" y1="290.0" x2="250" y2="245.0"/>
+<line class="l" x1="90" y1="290.0" x2="250" y2="295.0"/>
+<line class="l" x1="90" y1="290.0" x2="250" y2="345.0"/>
+<line class="l" x1="250" y1="95.0" x2="390" y2="95.0"/>
+<line class="l" x1="250" y1="95.0" x2="390" y2="145.0"/>
+<line class="l" x1="250" y1="95.0" x2="390" y2="195.0"/>
+<line class="l" x1="250" y1="95.0" x2="390" y2="245.0"/>
+<line class="l" x1="250" y1="95.0" x2="390" y2="295.0"/>
+<line class="l" x1="250" y1="95.0" x2="390" y2="345.0"/>
+<line class="l" x1="250" y1="145.0" x2="390" y2="95.0"/>
+<line class="l" x1="250" y1="145.0" x2="390" y2="145.0"/>
+<line class="l" x1="250" y1="145.0" x2="390" y2="195.0"/>
+<line class="l" x1="250" y1="145.0" x2="390" y2="245.0"/>
+<line class="l" x1="250" y1="145.0" x2="390" y2="295.0"/>
+<line class="l" x1="250" y1="145.0" x2="390" y2="345.0"/>
+<line class="l" x1="250" y1="195.0" x2="390" y2="95.0"/>
+<line class="l" x1="250" y1="195.0" x2="390" y2="145.0"/>
+<line class="l" x1="250" y1="195.0" x2="390" y2="195.0"/>
+<line class="l" x1="250" y1="195.0" x2="390" y2="245.0"/>
+<line class="l" x1="250" y1="195.0" x2="390" y2="295.0"/>
+<line class="l" x1="250" y1="195.0" x2="390" y2="345.0"/>
+<line class="l" x1="250" y1="245.0" x2="390" y2="95.0"/>
+<line class="l" x1="250" y1="245.0" x2="390" y2="145.0"/>
+<line class="l" x1="250" y1="245.0" x2="390" y2="195.0"/>
+<line class="l" x1="250" y1="245.0" x2="390" y2="245.0"/>
+<line class="l" x1="250" y1="245.0" x2="390" y2="295.0"/>
+<line class="l" x1="250" y1="245.0" x2="390" y2="345.0"/>
+<line class="l" x1="250" y1="295.0" x2="390" y2="95.0"/>
+<line class="l" x1="250" y1="295.0" x2="390" y2="145.0"/>
+<line class="l" x1="250" y1="295.0" x2="390" y2="195.0"/>
+<line class="l" x1="250" y1="295.0" x2="390" y2="245.0"/>
+<line class="l" x1="250" y1="295.0" x2="390" y2="295.0"/>
+<line class="l" x1="250" y1="295.0" x2="390" y2="345.0"/>
+<line class="l" x1="250" y1="345.0" x2="390" y2="95.0"/>
+<line class="l" x1="250" y1="345.0" x2="390" y2="145.0"/>
+<line class="l" x1="250" y1="345.0" x2="390" y2="195.0"/>
+<line class="l" x1="250" y1="345.0" x2="390" y2="245.0"/>
+<line class="l" x1="250" y1="345.0" x2="390" y2="295.0"/>
+<line class="l" x1="250" y1="345.0" x2="390" y2="345.0"/>
+<line class="l" x1="390" y1="95.0" x2="530" y2="95.0"/>
+<line class="l" x1="390" y1="95.0" x2="530" y2="145.0"/>
+<line class="l" x1="390" y1="95.0" x2="530" y2="195.0"/>
+<line class="l" x1="390" y1="95.0" x2="530" y2="245.0"/>
+<line class="l" x1="390" y1="95.0" x2="530" y2="295.0"/>
+<line class="l" x1="390" y1="95.0" x2="530" y2="345.0"/>
+<line class="l" x1="390" y1="145.0" x2="530" y2="95.0"/>
+<line class="l" x1="390" y1="145.0" x2="530" y2="145.0"/>
+<line class="l" x1="390" y1="145.0" x2="530" y2="195.0"/>
+<line class="l" x1="390" y1="145.0" x2="530" y2="245.0"/>
+<line class="l" x1="390" y1="145.0" x2="530" y2="295.0"/>
+<line class="l" x1="390" y1="145.0" x2="530" y2="345.0"/>
+<line class="l" x1="390" y1="195.0" x2="530" y2="95.0"/>
+<line class="l" x1="390" y1="195.0" x2="530" y2="145.0"/>
+<line class="l" x1="390" y1="195.0" x2="530" y2="195.0"/>
+<line class="l" x1="390" y1="195.0" x2="530" y2="245.0"/>
+<line class="l" x1="390" y1="195.0" x2="530" y2="295.0"/>
+<line class="l" x1="390" y1="195.0" x2="530" y2="345.0"/>
+<line class="l" x1="390" y1="245.0" x2="530" y2="95.0"/>
+<line class="l" x1="390" y1="245.0" x2="530" y2="145.0"/>
+<line class="l" x1="390" y1="245.0" x2="530" y2="195.0"/>
+<line class="l" x1="390" y1="245.0" x2="530" y2="245.0"/>
+<line class="l" x1="390" y1="245.0" x2="530" y2="295.0"/>
+<line class="l" x1="390" y1="245.0" x2="530" y2="345.0"/>
+<line class="l" x1="390" y1="295.0" x2="530" y2="95.0"/>
+<line class="l" x1="390" y1="295.0" x2="530" y2="145.0"/>
+<line class="l" x1="390" y1="295.0" x2="530" y2="195.0"/>
+<line class="l" x1="390" y1="295.0" x2="530" y2="245.0"/>
+<line class="l" x1="390" y1="295.0" x2="530" y2="295.0"/>
+<line class="l" x1="390" y1="295.0" x2="530" y2="345.0"/>
+<line class="l" x1="390" y1="345.0" x2="530" y2="95.0"/>
+<line class="l" x1="390" y1="345.0" x2="530" y2="145.0"/>
+<line class="l" x1="390" y1="345.0" x2="530" y2="195.0"/>
+<line class="l" x1="390" y1="345.0" x2="530" y2="245.0"/>
+<line class="l" x1="390" y1="345.0" x2="530" y2="295.0"/>
+<line class="l" x1="390" y1="345.0" x2="530" y2="345.0"/>
+<line class="l" x1="530" y1="95.0" x2="680" y2="130.0"/>
+<line class="l" x1="530" y1="95.0" x2="680" y2="220.0"/>
+<line class="l" x1="530" y1="95.0" x2="680" y2="310.0"/>
+<line class="l" x1="530" y1="145.0" x2="680" y2="130.0"/>
+<line class="l" x1="530" y1="145.0" x2="680" y2="220.0"/>
+<line class="l" x1="530" y1="145.0" x2="680" y2="310.0"/>
+<line class="l" x1="530" y1="195.0" x2="680" y2="130.0"/>
+<line class="l" x1="530" y1="195.0" x2="680" y2="220.0"/>
+<line class="l" x1="530" y1="195.0" x2="680" y2="310.0"/>
+<line class="l" x1="530" y1="245.0" x2="680" y2="130.0"/>
+<line class="l" x1="530" y1="245.0" x2="680" y2="220.0"/>
+<line class="l" x1="530" y1="245.0" x2="680" y2="310.0"/>
+<line class="l" x1="530" y1="295.0" x2="680" y2="130.0"/>
+<line class="l" x1="530" y1="295.0" x2="680" y2="220.0"/>
+<line class="l" x1="530" y1="295.0" x2="680" y2="310.0"/>
+<line class="l" x1="530" y1="345.0" x2="680" y2="130.0"/>
+<line class="l" x1="530" y1="345.0" x2="680" y2="220.0"/>
+<line class="l" x1="530" y1="345.0" x2="680" y2="310.0"/>
+<circle class="io" cx="90" cy="150.0" r="18"/><text class="w" x="90" y="150.0">x</text>
+<circle class="io" cx="90" cy="290.0" r="18"/><text class="w" x="90" y="290.0">y</text>
+<text class="t" x="90" y="58">input</text>
+<circle class="n" cx="250" cy="95.0" r="14"/>
+<circle class="n" cx="250" cy="145.0" r="14"/>
+<circle class="n" cx="250" cy="195.0" r="14"/>
+<circle class="n" cx="250" cy="245.0" r="14"/>
+<circle class="n" cx="250" cy="295.0" r="14"/>
+<circle class="n" cx="250" cy="345.0" r="14"/>
+<text class="m" x="250" y="225.0">⋮</text>
+<text class="m" x="250" y="372">128</text>
+<text class="t" x="250" y="58">stencils</text>
+<circle class="n" cx="390" cy="95.0" r="14"/>
+<circle class="n" cx="390" cy="145.0" r="14"/>
+<circle class="n" cx="390" cy="195.0" r="14"/>
+<circle class="n" cx="390" cy="245.0" r="14"/>
+<circle class="n" cx="390" cy="295.0" r="14"/>
+<circle class="n" cx="390" cy="345.0" r="14"/>
+<text class="m" x="390" y="225.0">⋮</text>
+<text class="m" x="390" y="372">128</text>
+<text class="t" x="390" y="58">stencils</text>
+<circle class="n" cx="530" cy="95.0" r="14"/>
+<circle class="n" cx="530" cy="145.0" r="14"/>
+<circle class="n" cx="530" cy="195.0" r="14"/>
+<circle class="n" cx="530" cy="245.0" r="14"/>
+<circle class="n" cx="530" cy="295.0" r="14"/>
+<circle class="n" cx="530" cy="345.0" r="14"/>
+<text class="m" x="530" y="225.0">⋮</text>
+<text class="m" x="530" y="372">128</text>
+<text class="t" x="530" y="58">stencils</text>
+<circle class="io" cx="680" cy="130.0" r="18"/><text class="w" x="680" y="130.0">r</text>
+<circle class="io" cx="680" cy="220.0" r="18"/><text class="w" x="680" y="220.0">g</text>
+<circle class="io" cx="680" cy="310.0" r="18"/><text class="w" x="680" y="310.0">b</text>
+<text class="t" x="680" y="58">color</text>
+<text class="m" x="380.0" y="404">every line is one blank, plus one c per circle · 33,795 in total</text>
+</svg>

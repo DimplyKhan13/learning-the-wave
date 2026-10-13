@@ -9,15 +9,20 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "prepare-image": "node scripts/prepare-image.mjs"
+    "prepare-image": "node scripts/prepare-image.mjs",
+    "benchmark": "tsx scripts/benchmark.mts",
+    "diagnose": "tsx scripts/diagnose.mts"
   },
   "license": "MIT",
   "dependencies": {
     "@tensorflow/tfjs": "^4.22.0",
-    "@tensorflow/tfjs-backend-wasm": "^4.22.0"
+    "@tensorflow/tfjs-backend-wasm": "^4.22.0",
+    "@tensorflow/tfjs-backend-webgpu": "^4.22.0"
   },
   "devDependencies": {
+    "@tensorflow/tfjs-node": "^4.22.0",
     "sharp": "^0.35.5",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.3.4"
   }

@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite';
 
-// GitHub Pages serves the site from /learning-the-wave/.
 export default defineConfig({
-  base: './',
+  base: './', // relative paths: works under https://<user>.github.io/learning-the-wave/
 });

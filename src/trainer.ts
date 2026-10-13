@@ -11,8 +11,11 @@ import { PaintingNet, type ModelConfig } from './model';
 export interface TrainerEvents {
   /** Called with the latest error after every frame of training. */
   onLoss(step: number, loss: number): void;
-  /** Called with the network's current painting, shape [H, W, 3]. */
-  onPaint(step: number, image: tf.Tensor3D): Promise<void>;
+  /**
+   * Called with the network's current painting, shape [H, W, 3], and the share
+   * of pixels it paints right (0–1).
+   */
+  onPaint(step: number, image: tf.Tensor3D, accuracy: number): Promise<void>;
   /** Called whenever play/pause state or speed changes. */
   onStatus(status: { running: boolean; step: number; stepsPerSecond: number }): void;
 }
@@ -23,17 +26,24 @@ export class Trainer {
   step = 0;
   running = false;
   stepsPerSecond = 0;
+  private trainedMs = 0; // time spent training, pauses excluded
+  private resumedAt = 0;
   /** Repaint the network's output every N steps (repainting costs a GPU readback). */
   renderEvery = 10;
+  /** Which picture to show, when the network learns several: color = f(x, y, t). */
+  t = 0;
+  /** Show the painting using only the k slowest waves (display only); null = all of them. */
+  visibleFrequencies: number | null = null;
 
-  private net: PaintingNet | null = null;
+  /** The network being trained, for anyone who wants to call it (e.g. the hover readout). */
+  net: PaintingNet | null = null;
   private stepsPerFrame = 1;
   private lastPainted = -1;
   private generation = 0; // bumps on restart, so a stale loop knows to stop
   private resumeWhenVisible = false;
 
   constructor(
-    private readonly pixels: tf.Tensor3D,
+    private readonly pixels: tf.Tensor3D | tf.Tensor3D[],
     private readonly events: TrainerEvents,
   ) {
     // No one is watching a hidden tab: stop burning their battery and GPU.
@@ -54,6 +64,8 @@ export class Trainer {
     this.net?.dispose();
     this.net = new PaintingNet(this.pixels, config);
     this.step = 0;
+    this.trainedMs = 0;
+    this.resumedAt = performance.now();
     this.lastPainted = -1;
     this.stepsPerFrame = 1;
     await this.paint();
@@ -63,31 +75,25 @@ export class Trainer {
   play(): void {
     if (this.running || !this.net) return;
     this.running = true;
+    this.resumedAt = performance.now();
     this.emitStatus();
     void this.loop(this.generation);
   }
 
   pause(): void {
+    if (this.running) this.trainedMs += performance.now() - this.resumedAt;
     this.running = false;
     this.emitStatus();
   }
 
-  /** Train up to exactly `target` steps, then paint. Used by the video recorder. */
-  async runTo(target: number): Promise<number> {
-    if (!this.net) throw new Error('call restart() first');
-    const chunk = 25;
-    while (this.step < target) {
-      const n = Math.min(chunk, target - this.step);
-      for (let i = 0; i < n - 1; i++) this.net.step();
-      const loss = this.net.step(true)!;
-      this.step += n;
-      const value = (await loss.data())[0];
-      loss.dispose();
-      this.events.onLoss(this.step, value);
-    }
-    await this.paint();
-    this.emitStatus();
-    return this.step;
+  /** Paint again with the current display settings (t, visible waves), e.g. while paused. */
+  repaint(): Promise<void> {
+    return this.paint();
+  }
+
+  /** Seconds spent training since the last restart, not counting pauses. */
+  get elapsedSeconds(): number {
+    return (this.trainedMs + (this.running ? performance.now() - this.resumedAt : 0)) / 1000;
   }
 
   private async loop(generation: number): Promise<void> {
@@ -118,12 +124,16 @@ export class Trainer {
 
   private async paint(): Promise<void> {
     if (!this.net) return;
-    const [height, width] = this.pixels.shape;
-    const image = tf.tidy(() => this.net!.predict().reshape([height, width, 3]) as tf.Tensor3D);
+    const [height, width] = (Array.isArray(this.pixels) ? this.pixels[0] : this.pixels).shape;
+    // Accuracy always covers every picture with every wave; the image shows what was asked for.
+    const { colors, accuracy } = this.net.evaluate();
+    const plain = this.net.frames === 1 && this.visibleFrequencies === null;
+    const shown = plain ? colors : this.net.paint(this.t, this.visibleFrequencies ?? undefined);
+    const image = shown.reshape([height, width, 3]) as tf.Tensor3D;
     try {
-      await this.events.onPaint(this.step, image);
+      await this.events.onPaint(this.step, image, (await accuracy.data())[0]);
     } finally {
-      image.dispose();
+      tf.dispose([colors, shown, accuracy, image]);
     }
     this.lastPainted = this.step;
   }

@@ -11,7 +11,7 @@ a chain of "ok, but what if…" sections, emoji callouts, real numbers).
 Status per section:
   [approved] Title, subtitle, AI note, intro (up to "Let's build it.")
   [approved] A picture is just a function (image = question; gradient; formula unknown)
-  [review]   A formula with blanks: build f(x, y) step by step (steps 1-3 approved; step 4 = pack it up; ends at 33,795; step 5 = circles, in the blurry section)
+  [approved] A formula with blanks: steps 1-4, ends at 33,795 (step 5 = circles, in the blurry section)
   [draft]    Ok, but how does it learn?
   [draft]    Why is it a blurry mess? (+ hummingbird callback)
   [draft]    Is it actually getting better? (the chart, the drops, failed speedups)

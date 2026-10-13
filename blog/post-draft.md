@@ -2,7 +2,7 @@
 
 *I wanted to know how AI draws pictures. No pretrained model, no server: you'll watch it learn The Great Wave from scratch.*
 
-[ARTHUR: AI transparency line here or not, e.g. "💡 Built with an AI pair programmer. Every number in this post was measured."]
+> 💡 Built with an AI pair programmer. Every number in this post was measured.
 
 <!--
 Draft for duarte.dev.br. Style reference: skerritt.blog (short paragraphs,

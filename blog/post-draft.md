@@ -10,7 +10,8 @@ a chain of "ok, but what if…" sections, emoji callouts, real numbers).
 
 Status per section:
   [approved] Title, subtitle, AI note, intro (up to "Let's build it.")
-  [draft]    A picture is just a function
+  [approved] A picture is just a function (image = question; gradient; formula unknown)
+  [approved] A formula with blanks (equation panel + nerd note + demo)
   [draft]    Ok, but how does it learn?
   [draft]    Why is it a blurry mess? (+ hummingbird callback)
   [draft]    Is it actually getting better? (the chart, the drops, failed speedups)
@@ -43,25 +44,43 @@ Let's build it.
 
 ## A picture is just a function
 
-First, the spoiler: AI is math.
+Here's a question you can ask any picture: *what color goes at `(x, y)`?*
 
-Remember `y = ax + b`? A neural network is that, stacked: multiply, add, repeat. Ours has 66,307 `a`s and `b`s instead of two, and training is the hunt for good values.
+Ask it for every pixel and you get the whole picture back. So a picture is just the answer to that question, at every point. Which is a fancy way of saying: a picture is a function.
 
-A formula. Numbers in, numbers out.
+And functions can be written down. Here's one:
+
+`color = a·x + b·y + c`
+
+Pick numbers for `a`, `b` and `c`, ask it about every pixel, and it paints this:
+
+**[small image: a gradient]**
+
+That's our old friend `y = ax + b` from school, with one more input. Change the numbers and the gradient tilts and shifts.
+
+The hummingbird was the same idea: a formula, the right numbers, and out comes a bird.
+
+So somewhere out there is a formula that paints *The Great Wave*. We just have no idea what it looks like, or what its numbers are.
+
+That's the job we're giving the AI.
+
+## A formula with blanks
+
+A neural network is a big, flexible formula with the numbers left blank: lots of those gradients at once, bent and stacked a few layers deep. (Spoiler: AI is math.) Ours has 66,307 blanks.
 
 **[the equation panel]**
 
 > 🤓 **Nerd note: reading the formula**
 > - **`W`** (weights): grids of the `a`s from `y = ax + b`. Multiplying by `W` mixes every input into every output.
 > - **`b`** (biases): the `b`s. A nudge added after each multiply.
-> - **`relu`**: "keep only the positive part". Negative numbers become 0. This tiny bend is what lets stacked layers draw curves instead of one straight line.
+> - **`relu`**: "keep only the positive part". Negative numbers become 0. This tiny bend is what lets stacked layers paint more than a flat gradient.
 > - **`sigmoid`**: squeezes the final numbers into 0–1, so every output is a valid color.
 > - **`γ(x, y)`**: how we feed in the coordinate. Spoiler: it's circles. We'll get there.
 > - **`B`**: 128 random frequencies, picked once and never changed.
 >
-> Training only ever changes the `W`s and `b`s. That's the 66,307 numbers.
+> The blanks are the `W`s and `b`s: 66,307 numbers.
 
-And a picture? Ask it a question: *what color goes at `(x, y)`?* Numbers in, numbers out. So let's make our formula *be* the picture.
+At the start the blanks are filled with random numbers, so it paints noise. Confident, colorful noise.
 
 **[live demo]**
 
@@ -69,16 +88,14 @@ And a picture? Ask it a question: *what color goes at `(x, y)`?* Numbers in, num
 
 ## Ok, but how does it learn?
 
-At the start our network knows nothing, so it paints noise. Confident, colorful noise.
-
-Then we make it play a very simple game, a few thousand times:
+Filling in the blanks is called training, and it's a very simple game, played a few thousand times:
 
 1. **Guess.** Paint every pixel.
 2. **Measure.** Compare with the original. How wrong was it, on average?
-3. **Nudge.** Move each of its 66,307 numbers a tiny bit in the direction that makes it less wrong.
+3. **Nudge.** Move each of the 66,307 numbers a tiny bit in the direction that makes it less wrong.
 4. **Repeat.**
 
-That's training. No rules about waves or mountains anywhere. Just *guess, measure, nudge, repeat*.
+No rules about waves or mountains anywhere. Just *guess, measure, nudge, repeat*.
 
 The chart next to the painting is the part I care about most. Without that one number, the loop has nothing to follow. Same as in production: if you can't measure the error, nothing gets better.
 

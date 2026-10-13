@@ -119,7 +119,9 @@ color = sigmoid(W₄ · relu(W₃ · relu(W₂ · relu(W₁ · (x, y) + b₁) + 
 
 Same formula, just shorter.
 
-> 🤓 **Nerd note:** `relu` is the stencil cutter: it keeps the positive part and flattens the rest. `sigmoid` squeezes the final numbers into 0–1, so every output is a valid color.
+> 🤓 **Nerd note.** Well, I have no analogy for this part, sorry.
+> - `relu` is the stencil cutter: it keeps the positive part and flattens the rest.
+> - `sigmoid` squeezes the final numbers into 0–1, so every output is a valid color.
 
 At the start, every blank holds a random number, so it paints noise. Confident, colorful noise.
 

@@ -5,6 +5,10 @@ import * as tf from '@tensorflow/tfjs';
 import { DEFAULT_CONFIG, psnr, type ModelConfig } from './model';
 import { LossChart } from './chart';
 import { Trainer } from './trainer';
+// Bundle the WASM fallback with the site instead of fetching it from a CDN.
+import wasmPlain from '@tensorflow/tfjs-backend-wasm/dist/tfjs-backend-wasm.wasm?url';
+import wasmSimd from '@tensorflow/tfjs-backend-wasm/dist/tfjs-backend-wasm-simd.wasm?url';
+import wasmThreaded from '@tensorflow/tfjs-backend-wasm/dist/tfjs-backend-wasm-threaded-simd.wasm?url';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const original = $<HTMLImageElement>('original');
@@ -17,18 +21,31 @@ const toggleButtons = [...document.querySelectorAll<HTMLButtonElement>('.toggle 
 
 const IMAGE_URL = `${import.meta.env.BASE_URL}great-wave.png`;
 
-/** WebGL runs on the GPU; WASM and plain JS are the fallbacks. */
+const params = new URLSearchParams(location.search);
+
+/**
+ * WebGL runs on the GPU; WASM and plain JS are the fallbacks.
+ * `?backend=wasm` (or cpu) forces one, for debugging and for recording the video.
+ */
 async function pickBackend(): Promise<string> {
-  if (await tf.setBackend('webgl').catch(() => false)) return 'webgl';
-  try {
-    const { setWasmPaths } = await import('@tensorflow/tfjs-backend-wasm');
-    setWasmPaths(`https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@${tf.version_core}/dist/`);
-    if (await tf.setBackend('wasm')) return 'wasm';
-  } catch {
-    // fall through to the CPU
+  const forced = params.get('backend');
+  const order = forced ? [forced] : ['webgl', 'wasm', 'cpu'];
+  for (const name of order) {
+    try {
+      if (name === 'wasm') {
+        const { setWasmPaths } = await import('@tensorflow/tfjs-backend-wasm');
+        setWasmPaths({
+          'tfjs-backend-wasm.wasm': wasmPlain,
+          'tfjs-backend-wasm-simd.wasm': wasmSimd,
+          'tfjs-backend-wasm-threaded-simd.wasm': wasmThreaded,
+        });
+      }
+      if (await tf.setBackend(name)) return name;
+    } catch {
+      // try the next one
+    }
   }
-  await tf.setBackend('cpu');
-  return 'cpu';
+  throw new Error('no TensorFlow.js backend available');
 }
 
 async function loadImage(url: string): Promise<HTMLImageElement> {

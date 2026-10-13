@@ -132,11 +132,11 @@ export class PaintingNet {
   }
 
   /** Paint and score in one pass: the colors plus the share of pixels painted right. */
-  evaluate(): { colors: tf.Tensor2D; accuracy: tf.Scalar } {
+  evaluate(tolerance = PIXEL_TOLERANCE): { colors: tf.Tensor2D; accuracy: tf.Scalar } {
     return tf.tidy(() => {
       const colors = this.predict();
       const worstChannel = colors.sub(this.target).abs().max(1);
-      const accuracy = worstChannel.lessEqual(PIXEL_TOLERANCE).toFloat().mean() as tf.Scalar;
+      const accuracy = worstChannel.lessEqual(tolerance).toFloat().mean() as tf.Scalar;
       return { colors, accuracy };
     });
   }

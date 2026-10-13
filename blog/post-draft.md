@@ -11,7 +11,7 @@ a chain of "ok, but what if…" sections, emoji callouts, real numbers).
 Status per section:
   [approved] Title, subtitle, AI note, intro (up to "Let's build it.")
   [approved] A picture is just a function (image = question; gradient; formula unknown)
-  [review]   A formula with blanks: build f(x, y) step by step (steps 1-2 approved: stencils + palette)
+  [review]   A formula with blanks: build f(x, y) step by step (steps 1-3 approved: stencils + palette, 'AI is just math')
   [draft]    Ok, but how does it learn?
   [draft]    Why is it a blurry mess? (+ hummingbird callback)
   [draft]    Is it actually getting better? (the chart, the drops, failed speedups)
@@ -99,7 +99,11 @@ red = a·stencil₁ + a·stencil₂ + … + a·stencil₁₂₈ + c     (each a 
 
 **771 blanks:** 384 to cut the stencils, 387 for the palette.
 
-**Step 3: stencils cut from stencils.** Before painting, cut 128 new stencils out of the first 128, then do it once more. Each round can carve finer shapes than the last. Three rounds of stencils, then the palette: **33,795 blanks.** Congratulations: that's a neural network. Every blank is still just an `a`, `b` or `c`.
+**Step 3: stencils cut from stencils.** Before painting, cut 128 new stencils out of the first 128, then do it once more. Each round can carve finer shapes than the last. Three rounds of stencils, then the palette: **33,795 blanks.** Congratulations: that's a neural network.
+
+It's hard to see what all those blanks are doing together. That's why we just call it AI.
+
+AI is just math.
 
 **Step 4: circles instead of `x` and `y`.** Feed it 256 values from spinning circles instead of a plain `x` and `y` (more on that soon). **66,307 blanks.**
 

@@ -9,7 +9,7 @@ Draft for duarte.dev.br. Style reference: skerritt.blog (short paragraphs,
 a chain of "ok, but what if…" sections, emoji callouts, real numbers).
 
 Status per section:
-  [approved] Intro
+  [approved] Title, subtitle, AI note, intro (up to "Let's build it.")
   [draft]    A picture is just a function
   [draft]    Ok, but how does it learn?
   [draft]    Why is it a blurry mess? (+ hummingbird callback)
@@ -43,17 +43,27 @@ Let's build it.
 
 ## A picture is just a function
 
-Here's the idea that made it click for me.
+Before we build anything, let's get one thing out of the way: AI is math. Not magic, not a tiny brain in a box. Math.
+
+Remember `y = ax + b` from school? Put in an `x`, multiply it by `a`, add `b`, and out comes a `y`. Change `a` and `b` and you get a different line.
+
+A neural network is that idea, stacked. Multiply, add, keep only the positive part, then do it again a few times. That's it. Ours has 66,307 of those `a`s and `b`s instead of two, and "training" is just the hunt for good values for them.
+
+So a neural network is a formula. A very long one, but a formula: numbers in, numbers out.
+
+**[the equation panel: our whole network, written out]**
+
+Now the trick this whole project rests on.
 
 A picture is a grid of pixels. But we can also treat it as a question we ask over and over: *what color goes here?*
 
 Give it `(x, y)`, get back `(r, g, b)`.
 
-So instead of storing 10,880 colors, we ask a neural network to *be* that function. A coordinate goes in, a color comes out. That's the whole model.
+Numbers in, numbers out. Sounds like a job for a formula. So instead of storing 10,880 colors, we ask our formula to *be* the picture. A coordinate goes in, a color comes out. That's the whole model.
 
 **[live demo]**
 
-> 👽 **Fun fact:** the network isn't adjusting pixels. It's adjusting one function that paints all of them. That's why the whole picture sharpens at once instead of filling in line by line.
+> 👽 **Fun fact:** the network isn't adjusting pixels. It's adjusting one formula that paints all of them. That's why the whole picture sharpens at once instead of filling in line by line.
 
 ## Ok, but how does it learn?
 

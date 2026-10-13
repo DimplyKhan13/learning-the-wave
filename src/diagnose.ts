@@ -33,7 +33,7 @@ export async function diagnose(pixels: tf.Tensor3D, config: ModelConfig): Promis
     return v;
   };
   const targetMean = await read(tf.tidy(() => pixels.mean([0, 1])));
-  const inputMean = (await read(net.inputMean()))[0];
+  const inputMean = await net.inputMean();
 
   const losses: Record<number, number> = {};
   const { colors, accuracy } = net.evaluate();

@@ -34,13 +34,14 @@ const params = new URLSearchParams(location.search);
 
 /**
  * WebGL runs on the GPU; WASM and plain JS are the fallbacks.
- * `?backend=wasm` (or cpu) forces one, for debugging and for recording the video.
+ * `?backend=webgpu|wasm|cpu` forces one, for debugging.
  */
 async function pickBackend(): Promise<string> {
   const forced = params.get('backend');
   const order = forced ? [forced] : ['webgl', 'wasm', 'cpu'];
   for (const name of order) {
     try {
+      if (name === 'webgpu') await import('@tensorflow/tfjs-backend-webgpu');
       if (name === 'wasm') {
         const { setWasmPaths } = await import('@tensorflow/tfjs-backend-wasm');
         // Single-threaded: threads need cross-origin isolation, which static hosts can't provide.
@@ -96,8 +97,7 @@ async function main(): Promise<void> {
   // ?diagnose=1: run the seeded check from scripts/diagnose.mts here and compare.
   if (params.has('diagnose')) {
     status.textContent = `Running diagnostics on ${backend}${device ? ` (${device})` : ''}…`;
-    const report = await diagnose(pixels, DEFAULT_CONFIG);
-    showDiagnostics(report, device);
+    await runDiagnostics(image, device);
     status.textContent = 'Diagnostics done. Reload without ?diagnose=1 to train.';
     return;
   }
@@ -211,10 +211,8 @@ async function main(): Promise<void> {
     trainer.pause();
     diagnoseButton.disabled = true;
     diagnoseButton.textContent = 'Running diagnostics…';
-    document.querySelector('.diagnose')?.remove();
-    showDiagnostics(await diagnose(pixels, DEFAULT_CONFIG), device);
-    diagnoseButton.textContent = 'Run diagnostics';
-    diagnoseButton.disabled = false;
+    await runDiagnostics(image, device);
+    diagnoseButton.textContent = 'Reload the page to train again';
   });
 
   playButton.disabled = restartButton.disabled = false;
@@ -224,30 +222,60 @@ async function main(): Promise<void> {
   Object.assign(window, { wave: { tf, trainer, accuracyChart, errorChart } });
 }
 
-function showDiagnostics(report: Report, device: string): void {
+/**
+ * Run the seeded check on each GPU path this browser offers and compare every
+ * one against the Node reference. Leaves TensorFlow.js on the last backend
+ * tried, so the page asks for a reload afterwards.
+ */
+async function runDiagnostics(image: HTMLImageElement, device: string): Promise<void> {
+  const variants: { label: string; backend: string; flags?: Record<string, boolean> }[] = [
+    { label: 'WebGL', backend: 'webgl' },
+    { label: 'WebGL, unpacked', backend: 'webgl', flags: { WEBGL_PACK: false, WEBGL_PACK_BINARY_OPERATIONS: false, WEBGL_PACK_UNARY_OPERATIONS: false, WEBGL_PACK_REDUCE: false, WEBGL_LAZILY_UNPACK: false } },
+    { label: 'WebGPU', backend: 'webgpu' },
+  ];
+  const results: { label: string; report?: Report; error?: string }[] = [];
+  for (const variant of variants) {
+    status.textContent = `Diagnostics: ${variant.label}…`;
+    try {
+      if (variant.backend === 'webgpu') await import('@tensorflow/tfjs-backend-webgpu');
+      if (!(await tf.setBackend(variant.backend))) throw new Error('not available');
+      for (const [flag, value] of Object.entries(variant.flags ?? {})) tf.env().set(flag, value);
+      const pixels = tf.tidy(() => tf.browser.fromPixels(image).toFloat().div(255) as tf.Tensor3D);
+      results.push({ label: variant.label, report: await diagnose(pixels, DEFAULT_CONFIG) });
+      pixels.dispose();
+    } catch (err) {
+      results.push({ label: variant.label, error: err instanceof Error ? err.message : String(err) });
+    }
+  }
+  showDiagnostics(results, device);
+}
+
+function showDiagnostics(results: { label: string; report?: Report; error?: string }[], device: string): void {
   const ref = reference as Report;
   const fmt = (v: number) => v.toPrecision(4);
-  const diff = (a: number, b: number) => {
-    const pct = (Math.abs(a - b) / Math.max(Math.abs(b), 1e-9)) * 100;
-    return `<td class="${pct > 5 ? 'bad' : 'ok'}">${pct.toFixed(1)}%</td>`;
+  // A cell per variant, red when more than 5% away from the reference.
+  const cell = (v: number | undefined, r: number, compare = true) => {
+    if (v === undefined) return '<td>—</td>';
+    const pct = (Math.abs(v - r) / Math.max(Math.abs(r), 1e-9)) * 100;
+    return compare ? `<td class="${pct > 5 ? 'bad' : 'ok'}">${fmt(v)} <small>(${pct.toFixed(1)}%)</small></td>` : `<td>${fmt(v)}</td>`;
   };
-  const rows: string[] = [];
-  report.targetMean.forEach((v, i) =>
-    rows.push(`<tr><td>target mean ${'RGB'[i]}</td><td>${fmt(v)}</td><td>${fmt(ref.targetMean[i])}</td>${diff(v, ref.targetMean[i])}</tr>`),
-  );
-  rows.push(`<tr><td>input mean</td><td>${fmt(report.inputMean)}</td><td>${fmt(ref.inputMean)}</td><td></td></tr>`);
-  for (const [step, v] of Object.entries(report.losses)) {
-    const r = ref.losses[Number(step)];
-    rows.push(`<tr><td>error after step ${step}</td><td>${fmt(v)}</td><td>${fmt(r)}</td>${diff(v, r)}</tr>`);
-  }
-  rows.push(`<tr><td>ms/step, waiting each step</td><td>${report.msPerStepSynced.toFixed(1)}</td><td>${ref.msPerStepSynced.toFixed(1)}</td><td></td></tr>`);
-  rows.push(`<tr><td>ms/step, 50 queued</td><td>${report.msPerStepQueued.toFixed(1)}</td><td>${ref.msPerStepQueued.toFixed(1)}</td><td></td></tr>`);
+  const row = (label: string, pick: (r: Report) => number, compare = true) =>
+    `<tr><td>${label}</td>${results.map((x) => cell(x.report && pick(x.report), pick(ref), compare)).join('')}<td>${fmt(pick(ref))}</td></tr>`;
+  const rows = [
+    ...[0, 1, 2].map((i) => row(`target mean ${'RGB'[i]}`, (r) => r.targetMean[i])),
+    row('input mean', (r) => r.inputMean),
+    ...Object.keys(ref.losses).map((step) => row(`error after step ${step}`, (r) => r.losses[Number(step)])),
+    row('ms/step, waiting each step', (r) => r.msPerStepSynced, false),
+    row('ms/step, 50 queued', (r) => r.msPerStepQueued, false),
+  ];
+  const errors = results.filter((x) => x.error).map((x) => `<p>${x.label}: ${x.error}</p>`).join('');
+  document.querySelector('.diagnose')?.remove();
   const section = document.createElement('section');
   section.className = 'diagnose';
   section.innerHTML = `<h2>Diagnostics</h2>
-    <p>This device: ${report.backend}${device ? ` (${device})` : ''} · ${navigator.userAgent}</p>
-    <table><thead><tr><th></th><th>this device</th><th>reference (tfjs-node, CPU)</th><th>difference</th></tr></thead>
-    <tbody>${rows.join('')}</tbody></table>`;
+    <p>${device || 'no GPU info'} · ${navigator.userAgent}</p>
+    <table><thead><tr><th></th>${results.map((x) => `<th>${x.label}</th>`).join('')}<th>reference (tfjs-node, CPU)</th></tr></thead>
+    <tbody>${rows.join('')}</tbody></table>${errors}`;
   document.querySelector('.demo')!.after(section);
 }
 

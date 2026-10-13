@@ -34,13 +34,16 @@ export const DEFAULT_CONFIG: ModelConfig = {
 
 /** One (x, y) per pixel, row by row, both normalized to [-1, 1]. Shape [H*W, 2]. */
 export function pixelCoordinates(width: number, height: number): tf.Tensor2D {
-  return tf.tidy(() => {
-    const xs = tf.linspace(-1, 1, width);
-    const ys = tf.linspace(-1, 1, height);
-    const x = tf.tile(xs.reshape([1, width]), [height, 1]);
-    const y = tf.tile(ys.reshape([height, 1]), [1, width]);
-    return tf.stack([x.flatten(), y.flatten()], 1) as tf.Tensor2D;
-  });
+  // Plain JavaScript, so every device starts from exactly the same numbers.
+  const coords = new Float32Array(width * height * 2);
+  for (let row = 0; row < height; row++) {
+    for (let col = 0; col < width; col++) {
+      const i = 2 * (row * width + col);
+      coords[i] = -1 + (2 * col) / (width - 1);
+      coords[i + 1] = -1 + (2 * row) / (height - 1);
+    }
+  }
+  return tf.tensor2d(coords, [width * height, 2]);
 }
 
 /**
@@ -138,9 +141,12 @@ export class PaintingNet {
     });
   }
 
-  /** Mean of the encoded input; lets diagnostics check every backend gets identical numbers. */
-  inputMean(): tf.Scalar {
-    return this.inputs.mean();
+  /** Mean of the encoded input, summed in double precision on the CPU (for diagnostics). */
+  async inputMean(): Promise<number> {
+    const values = await this.inputs.data();
+    let sum = 0;
+    for (const v of values) sum += v;
+    return sum / values.length;
   }
 
   /** Call the function at any point, even between pixels. Returns [r, g, b] in [0, 1]. */

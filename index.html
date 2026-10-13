@@ -98,6 +98,14 @@
             <figcaption>t = 1</figcaption>
           </figure>
         </div>
+        <div class="word-control">
+          <label for="morph-word">Type a four-letter word</label>
+          <input id="morph-word" type="text" maxlength="4" placeholder="WEVE" autocomplete="off" spellcheck="false" />
+          <p class="hint" id="morph-word-explain">
+            WAVE is the wave, FUJI is the mountain, anything else lands in between. The network doesn't read the
+            word: a three-line rule turns it into the number t.
+          </p>
+        </div>
         <input id="morph-t" class="morph-slider" type="range" min="0" max="1" step="0.01" value="0" aria-label="t" />
         <div class="controls">
           <button id="morph-play" class="primary" type="button" disabled>Train</button>

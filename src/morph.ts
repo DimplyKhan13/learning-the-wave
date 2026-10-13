@@ -9,6 +9,7 @@ import * as tf from '@tensorflow/tfjs';
 import { psnr, type ModelConfig } from './model';
 import { Trainer } from './trainer';
 import { readPixels } from './pixels';
+import { wordToT } from './words';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -77,10 +78,30 @@ export function setupMorph(images: [HTMLImageElement, HTMLImageElement], config:
       void repaint();
     }
   };
-  slider.addEventListener('input', () => {
-    trainer.t = Number(slider.value);
-    tLabel.textContent = trainer.t.toFixed(2);
+  const setT = (t: number) => {
+    trainer.t = t;
+    slider.value = String(t);
+    tLabel.textContent = t.toFixed(2);
     if (!trainer.running) void repaint();
+  };
+  slider.addEventListener('input', () => {
+    setT(Number(slider.value));
+    wordExplain.textContent = '';
+  });
+
+  // Type a four-letter word: a small rule (not the network) turns it into t.
+  const wordInput = $<HTMLInputElement>('morph-word');
+  const wordExplain = $('morph-word-explain');
+  wordInput.addEventListener('input', () => {
+    wordInput.value = wordInput.value.toUpperCase().replace(/[^A-Z]/g, '');
+    const result = wordToT(wordInput.value);
+    if (!result) {
+      wordExplain.textContent = 'Four letters, A to Z.';
+      return;
+    }
+    const { t, offWave, offFuji } = result;
+    wordExplain.textContent = `${wordInput.value}: ${offWave} letter${offWave === 1 ? '' : 's'} off WAVE, ${offFuji} off FUJI → t = ${offWave} / (${offWave} + ${offFuji}) = ${t.toFixed(2)}`;
+    setT(t);
   });
 
   return { pause: () => trainer.pause() };

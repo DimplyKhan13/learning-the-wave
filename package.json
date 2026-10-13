@@ -9,7 +9,9 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "prepare-image": "node scripts/prepare-image.mjs"
+    "prepare-image": "node scripts/prepare-image.mjs",
+    "benchmark": "tsx scripts/benchmark.mts",
+    "diagnose": "tsx scripts/diagnose.mts"
   },
   "license": "MIT",
   "dependencies": {
@@ -19,7 +21,6 @@
   },
   "devDependencies": {
     "@tensorflow/tfjs-node": "^4.22.0",
-    "playwright": "^1.64.0",
     "sharp": "^0.35.5",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",

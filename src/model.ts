@@ -71,8 +71,12 @@ export function fourierFeatures(coords: tf.Tensor2D, B: tf.Tensor2D): tf.Tensor2
   return tf.tensor2d(out, [n, 2 * m]);
 }
 
-/** A pixel counts as "painted right" when every channel is within 5% of the original. */
-export const PIXEL_TOLERANCE = 0.05;
+/**
+ * A pixel counts as "painted right" when every channel is within 1% of the
+ * original (about ±2.5 levels out of 255). Strict on purpose: at 5% the curve
+ * hit 99% within ~560 steps and then had nothing left to show.
+ */
+export const PIXEL_TOLERANCE = 0.01;
 
 export class PaintingNet {
   readonly config: ModelConfig;

@@ -6,7 +6,9 @@ import { DEFAULT_CONFIG, PIXEL_TOLERANCE, psnr, type ModelConfig } from './model
 import { MetricChart } from './chart';
 import { drawTiles, formulaHtml, inputTiles } from './equation';
 import { Trainer } from './trainer';
+import { readPixels } from './pixels';
 import { diagnose, type Report } from './diagnose';
+import { setupMorph, type MorphDemo } from './morph';
 import reference from './diagnose-reference.json';
 // Bundle the WASM fallback with the site instead of fetching it from a CDN.
 import wasmPlain from '@tensorflow/tfjs-backend-wasm/dist/tfjs-backend-wasm.wasm?url';
@@ -29,6 +31,7 @@ const restartButton = $<HTMLButtonElement>('restart');
 const toggleButtons = [...document.querySelectorAll<HTMLButtonElement>('.toggle button')];
 
 const IMAGE_URL = `${import.meta.env.BASE_URL}great-wave.png`;
+const FUJI_URL = `${import.meta.env.BASE_URL}red-fuji.png`;
 
 const params = new URLSearchParams(location.search);
 
@@ -95,7 +98,7 @@ async function main(): Promise<void> {
   document.documentElement.style.setProperty('--image-aspect', `${image.naturalWidth} / ${image.naturalHeight}`);
 
   // The target: every pixel's color as a number between 0 and 1.
-  const pixels = tf.tidy(() => tf.browser.fromPixels(image).toFloat().div(255) as tf.Tensor3D);
+  const pixels = readPixels(image);
 
   // Without a GPU the full-size network is too slow to be fun, so shrink it.
   const base: ModelConfig =
@@ -166,8 +169,40 @@ async function main(): Promise<void> {
     trainer.pause();
     await trainer.restart(config);
     await showEquation();
+    resetWaves();
+    play();
+  };
+
+  // Only one demo trains at a time: two at once would halve the speed of both.
+  let morph: MorphDemo | null = null;
+  const play = () => {
+    morph?.pause();
     trainer.play();
   };
+
+  // "Waves the network can see": hide the fastest waves from the painting (display only).
+  const wavesSlider = $<HTMLInputElement>('waves');
+  const wavesValue = $('waves-value');
+  let wavesPainting = false;
+  const showWaves = async () => {
+    const k = Number(wavesSlider.value);
+    wavesValue.textContent = `${k} of ${config.frequencies}`;
+    trainer.visibleFrequencies = k >= config.frequencies ? null : k;
+    // While paused, repaint right away (one paint at a time; the last position wins).
+    if (trainer.running || wavesPainting) return;
+    wavesPainting = true;
+    await trainer.repaint();
+    wavesPainting = false;
+    if (Number(wavesSlider.value) !== k) void showWaves();
+  };
+  const resetWaves = () => {
+    $('waves-control').hidden = !config.fourier;
+    wavesSlider.max = String(config.frequencies);
+    wavesSlider.value = String(config.frequencies);
+    wavesValue.textContent = `${config.frequencies} of ${config.frequencies}`;
+    trainer.visibleFrequencies = null;
+  };
+  wavesSlider.addEventListener('input', () => void showWaves());
 
   // The equation panel follows the current mode (with or without Fourier features).
   const showEquation = async () => {
@@ -204,7 +239,7 @@ async function main(): Promise<void> {
   painting.addEventListener('pointerdown', probe);
   painting.addEventListener('pointerleave', () => (paintingCaption.textContent = 'What the network paints'));
 
-  playButton.addEventListener('click', () => (trainer.running ? trainer.pause() : trainer.play()));
+  playButton.addEventListener('click', () => (trainer.running ? trainer.pause() : play()));
   restartButton.addEventListener('click', () => void start(config));
   for (const button of toggleButtons) {
     button.addEventListener('click', () => {
@@ -226,6 +261,14 @@ async function main(): Promise<void> {
   playButton.disabled = restartButton.disabled = false;
   await start(config);
 
+  // Second demo: the same network idea learning two prints, color = f(x, y, t).
+  const fuji = $<HTMLImageElement>('fuji');
+  const waveSmall = $<HTMLImageElement>('wave-small');
+  fuji.src = FUJI_URL;
+  waveSmall.src = IMAGE_URL;
+  await fuji.decode();
+  morph = setupMorph([image, fuji], base, () => trainer.pause());
+
   // Handy for debugging from the console.
   Object.assign(window, { wave: { tf, trainer, accuracyChart, errorChart } });
 }
@@ -246,7 +289,7 @@ async function runDiagnostics(image: HTMLImageElement, device: string): Promise<
     try {
       if (variant.backend === 'webgpu') await import('@tensorflow/tfjs-backend-webgpu');
       if (!(await tf.setBackend(variant.backend))) throw new Error('not available');
-      const pixels = tf.tidy(() => tf.browser.fromPixels(image).toFloat().div(255) as tf.Tensor3D);
+      const pixels = readPixels(image);
       results.push({ label: variant.label, report: await diagnose(pixels, DEFAULT_CONFIG) });
       pixels.dispose();
     } catch (err) {

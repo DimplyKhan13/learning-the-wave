@@ -30,6 +30,10 @@ export class Trainer {
   private resumedAt = 0;
   /** Repaint the network's output every N steps (repainting costs a GPU readback). */
   renderEvery = 10;
+  /** Which picture to show, when the network learns several: color = f(x, y, t). */
+  t = 0;
+  /** Show the painting using only the k slowest waves (display only); null = all of them. */
+  visibleFrequencies: number | null = null;
 
   /** The network being trained, for anyone who wants to call it (e.g. the hover readout). */
   net: PaintingNet | null = null;
@@ -39,7 +43,7 @@ export class Trainer {
   private resumeWhenVisible = false;
 
   constructor(
-    private readonly pixels: tf.Tensor3D,
+    private readonly pixels: tf.Tensor3D | tf.Tensor3D[],
     private readonly events: TrainerEvents,
   ) {
     // No one is watching a hidden tab: stop burning their battery and GPU.
@@ -82,22 +86,9 @@ export class Trainer {
     this.emitStatus();
   }
 
-  /** Train up to exactly `target` steps, then paint. Used by the video recorder. */
-  async runTo(target: number): Promise<number> {
-    if (!this.net) throw new Error('call restart() first');
-    const chunk = 25;
-    while (this.step < target) {
-      const n = Math.min(chunk, target - this.step);
-      for (let i = 0; i < n - 1; i++) this.net.step();
-      const loss = this.net.step(true)!;
-      this.step += n;
-      const value = (await loss.data())[0];
-      loss.dispose();
-      this.events.onLoss(this.step, value);
-    }
-    await this.paint();
-    this.emitStatus();
-    return this.step;
+  /** Paint again with the current display settings (t, visible waves), e.g. while paused. */
+  repaint(): Promise<void> {
+    return this.paint();
   }
 
   /** Seconds spent training since the last restart, not counting pauses. */
@@ -133,13 +124,16 @@ export class Trainer {
 
   private async paint(): Promise<void> {
     if (!this.net) return;
-    const [height, width] = this.pixels.shape;
+    const [height, width] = (Array.isArray(this.pixels) ? this.pixels[0] : this.pixels).shape;
+    // Accuracy always covers every picture with every wave; the image shows what was asked for.
     const { colors, accuracy } = this.net.evaluate();
-    const image = colors.reshape([height, width, 3]) as tf.Tensor3D;
+    const plain = this.net.frames === 1 && this.visibleFrequencies === null;
+    const shown = plain ? colors : this.net.paint(this.t, this.visibleFrequencies ?? undefined);
+    const image = shown.reshape([height, width, 3]) as tf.Tensor3D;
     try {
       await this.events.onPaint(this.step, image, (await accuracy.data())[0]);
     } finally {
-      tf.dispose([colors, accuracy, image]);
+      tf.dispose([colors, shown, accuracy, image]);
     }
     this.lastPainted = this.step;
   }

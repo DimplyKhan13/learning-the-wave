@@ -383,3 +383,69 @@ h2 {
   color: #c0392b;
   font-weight: 600;
 }
+
+/* ---------- waves slider ---------- */
+
+.waves-control {
+  margin-top: 20px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.waves-control label {
+  font: 14px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+input[type='range'] {
+  display: block;
+  width: 100%;
+  margin: 10px 0 0;
+  accent-color: var(--accent);
+}
+
+/* ---------- one function, two prints ---------- */
+
+.morph {
+  margin-top: 48px;
+  max-width: 1100px;
+}
+
+.morph > p {
+  max-width: 680px;
+}
+
+.morph-panels {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+#wave-small,
+#fuji,
+#morph-painting {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: var(--image-aspect, 3 / 2);
+  border-radius: 4px;
+  image-rendering: pixelated;
+  background: var(--grid);
+}
+
+.morph-slider {
+  margin-top: 14px;
+}
+
+@media (max-width: 600px) {
+  .morph-panels {
+    grid-template-columns: 1fr 1fr;
+  }
+  .morph-panels .panel:nth-child(2) {
+    grid-column: 1 / -1;
+    order: -1;
+  }
+}

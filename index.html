@@ -64,12 +64,51 @@
         <p id="tiles-intro"></p>
         <div class="tiles" id="tiles"></div>
         <p class="hint">Hover over (or touch) the painting to call the function yourself.</p>
+        <div class="waves-control" id="waves-control">
+          <label for="waves">Waves the network can see: <strong id="waves-value"></strong></label>
+          <input id="waves" type="range" min="1" step="1" />
+          <p class="hint">
+            Slide left to hide the fastest waves from the network. It doesn't fade into a smooth blur like a classic
+            Fourier series; it turns grainy, because the network mixes the waves instead of adding them up.
+          </p>
+        </div>
+      </section>
+
+      <section class="morph" aria-labelledby="morph-title">
+        <h2 id="morph-title">One function, two prints</h2>
+        <p>
+          Add one more input, <code>t</code>, and the same kind of network learns two pictures at once: the Great Wave
+          at <code>t = 0</code>, Red Fuji at <code>t = 1</code>. It never sees anything in between, so whatever it
+          paints there is its own guess.
+        </p>
+        <div class="morph-panels">
+          <figure class="panel">
+            <img id="wave-small" alt="The Great Wave off Kanagawa" />
+            <figcaption>t = 0</figcaption>
+          </figure>
+          <figure class="panel">
+            <div class="painting">
+              <canvas id="morph-painting" aria-label="The network's painting at the chosen t"></canvas>
+              <span class="step-badge" id="morph-badge">step 0</span>
+            </div>
+            <figcaption>f(x, y, t) at t = <span id="morph-t-value">0.00</span></figcaption>
+          </figure>
+          <figure class="panel">
+            <img id="fuji" alt="Fine Wind, Clear Morning (Red Fuji), Katsushika Hokusai" />
+            <figcaption>t = 1</figcaption>
+          </figure>
+        </div>
+        <input id="morph-t" class="morph-slider" type="range" min="0" max="1" step="0.01" value="0" aria-label="t" />
+        <div class="controls">
+          <button id="morph-play" class="primary" type="button" disabled>Train</button>
+        </div>
+        <p class="status" id="morph-status"></p>
       </section>
 
       <footer class="credit">
         <p>
-          <em>The Great Wave off Kanagawa</em>, Katsushika Hokusai, c. 1831. The Metropolitan Museum of Art, public
-          domain.
+          <em>The Great Wave off Kanagawa</em> and <em>Fine Wind, Clear Morning</em> (Red Fuji), Katsushika
+          Hokusai, c. 1831. The Metropolitan Museum of Art, public domain.
         </p>
         <p><button id="diagnose" type="button">Run diagnostics</button></p>
       </footer>

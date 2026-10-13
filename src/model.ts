@@ -18,7 +18,9 @@ export interface ModelConfig {
   hiddenLayers: number;
   hiddenUnits: number;
   learningRate: number;
-  /** Shrink the learning rate exponentially to `finalLearningRate` over this many steps (0 = constant). */
+  /** Keep the learning rate constant until this step, then shrink it exponentially... */
+  decayStart: number;
+  /** ...to `finalLearningRate` over this many steps (0 = constant forever). */
   decaySteps: number;
   finalLearningRate: number;
   /** Unlock the Fourier frequencies from slow to fast over this many steps (0 = all at once). */
@@ -34,6 +36,7 @@ export const DEFAULT_CONFIG: ModelConfig = {
   hiddenLayers: 3,
   hiddenUnits: 128,
   learningRate: 1e-3,
+  decayStart: 0,
   decaySteps: 0,
   finalLearningRate: 1e-3,
   coarseToFineSteps: 0,
@@ -137,7 +140,7 @@ export class PaintingNet {
     this.parameterCount = this.params.reduce((n, p) => n + p.size, 0);
     this.optimizer = tf.train.adam(config.learningRate);
 
-    if (this.B && config.coarseToFineSteps > 0) {
+    if (this.B) {
       const b = this.B.dataSync();
       const m = config.frequencies;
       const order = Array.from({ length: m }, (_, k) => k).sort(
@@ -149,31 +152,39 @@ export class PaintingNet {
   }
 
   /**
+   * Per-input weights from a weight per frequency rank (0 = slowest): sin and
+   * cos of a frequency share one weight, and t (if any) always passes through.
+   */
+  private frequencyWeights(weight: (rank: number) => number): tf.Tensor2D {
+    const m = this.config.frequencies;
+    const weights = new Float32Array(this.inputs.shape[1]).fill(1);
+    this.frequencyRank.forEach((rank, k) => (weights[k] = weights[m + k] = weight(rank)));
+    return tf.tensor2d(weights, [1, weights.length]);
+  }
+
+  /**
    * Training schedules, applied before every step:
    * - learning rate: big steps early to get the shapes, small steps late to settle the detail;
    * - coarse-to-fine: frequencies fade in from slowest to fastest, so the network
    *   lays down the broad shapes before it is handed the fine stripes.
    */
   private updateSchedule(): void {
-    const { decaySteps, learningRate, finalLearningRate, coarseToFineSteps, frequencies: m } = this.config;
+    const { decayStart, decaySteps, learningRate, finalLearningRate, coarseToFineSteps, frequencies: m } = this.config;
     if (decaySteps > 0) {
-      const progress = Math.min(this.steps / decaySteps, 1);
+      const progress = Math.min(Math.max(this.steps - decayStart, 0) / decaySteps, 1);
       // Adam reads this field on every update.
       (this.optimizer as unknown as { learningRate: number }).learningRate =
         learningRate * (finalLearningRate / learningRate) ** progress;
     }
-    if (this.frequencyRank.length && (this.frequencyMask || this.steps === 0) && this.steps % 10 === 0) {
+    const unlocking = this.frequencyMask || this.steps === 0;
+    if (this.frequencyRank.length && coarseToFineSteps > 0 && unlocking && this.steps % 10 === 0) {
       this.frequencyMask?.dispose();
       this.frequencyMask = null;
       if (this.steps < coarseToFineSteps) {
-        // Start with the slowest eighth of the frequencies, end with all of them.
+        // Start with the slowest eighth of the frequencies, end with all of them;
+        // each frequency fades in over one rank.
         const unlocked = m / 8 + ((7 * m) / 8) * (this.steps / coarseToFineSteps);
-        const weights = new Float32Array(2 * m);
-        this.frequencyRank.forEach((rank, k) => {
-          const w = Math.min(Math.max(unlocked - rank, 0), 1); // each frequency fades in over one rank
-          weights[k] = weights[m + k] = w;
-        });
-        this.frequencyMask = tf.tensor2d(weights, [1, 2 * m]);
+        this.frequencyMask = this.frequencyWeights((rank) => Math.min(Math.max(unlocked - rank, 0), 1));
       }
     }
   }
@@ -190,9 +201,9 @@ export class PaintingNet {
   }
 
   /** The function itself: encoded coordinates in, colors out. */
-  private forward(inputs: tf.Tensor2D): tf.Tensor2D {
+  private forward(inputs: tf.Tensor2D, mask = this.frequencyMask): tf.Tensor2D {
     return tf.tidy(() => {
-      let h: tf.Tensor2D = this.frequencyMask ? inputs.mul(this.frequencyMask) : inputs;
+      let h: tf.Tensor2D = mask ? inputs.mul(mask) : inputs;
       for (let i = 0; i < this.params.length; i += 2) {
         h = h.matMul(this.params[i] as tf.Tensor2D).add(this.params[i + 1]);
         h = i + 2 < this.params.length ? h.relu() : h.sigmoid();
@@ -207,9 +218,15 @@ export class PaintingNet {
   }
 
   /** The network's painting at t (any value, not just the trained ones): shape [H*W, 3], values in [0, 1]. */
-  paint(t = 0): tf.Tensor2D {
-    if (this.frames === 1) return this.predict();
-    return tf.tidy(() => this.forward(this.withTime(this.encoded, t)));
+  paint(t = 0, visibleFrequencies = this.config.frequencies): tf.Tensor2D {
+    return tf.tidy(() => {
+      // Optionally hide all but the k slowest waves (display only: training always sees them all).
+      const mask =
+        this.frequencyRank.length && visibleFrequencies < this.config.frequencies
+          ? this.frequencyWeights((rank) => (rank < visibleFrequencies ? 1 : 0))
+          : this.frequencyMask;
+      return this.forward(this.frames === 1 ? this.inputs : this.withTime(this.encoded, t), mask);
+    });
   }
 
   /** Paint and score in one pass: the colors plus the share of pixels painted right. */

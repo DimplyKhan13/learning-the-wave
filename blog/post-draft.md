@@ -11,7 +11,7 @@ a chain of "ok, but what if…" sections, emoji callouts, real numbers).
 Status per section:
   [approved] Title, subtitle, AI note, intro (up to "Let's build it.")
   [approved] A picture is just a function (image = question; gradient; formula unknown)
-  [review]   A formula with blanks: build f(x, y) step by step (steps 1-3 approved: stencils + palette, 'AI is just math')
+  [review]   A formula with blanks: build f(x, y) step by step (steps 1-3 approved; ends at 33,795; step 4 moved to the blurry section)
   [draft]    Ok, but how does it learn?
   [draft]    Why is it a blurry mess? (+ hummingbird callback)
   [draft]    Is it actually getting better? (the chart, the drops, failed speedups)
@@ -111,17 +111,17 @@ It's hard to see what all those blanks are doing together. That's why we just ca
 
 AI is just math.
 
-**Step 4: circles instead of `x` and `y`.** Feed it 256 values from spinning circles instead of a plain `x` and `y` (more on that soon). **66,307 blanks.**
+Nobody wants to write 33,795 letters, so we pack them: the numbers that multiply go into grids called `W` (weights), and the ones that get added are called `b` (biases). Yes, `b` again. Sorry, mathematicians.
 
-Nobody wants to write 66,307 letters, so we pack them: the numbers that multiply go into grids called `W` (weights), and the ones that get added are called `b` (biases). Yes, `b` again. Sorry, mathematicians.
-
-**[the equation panel]**
+```
+color = sigmoid(W₄ · relu(W₃ · relu(W₂ · relu(W₁ · (x, y) + b₁) + b₂) + b₃) + b₄)
+```
 
 Same formula, just shorter.
 
-> 🤓 **Nerd note:** `relu` is the stencil cutter: it keeps the positive part and flattens the rest. `sigmoid` squeezes the final numbers into 0–1, so every output is a valid color. `γ(x, y)` is the circles, and `B` holds their 128 random speeds and directions, picked once and never changed.
+> 🤓 **Nerd note:** `relu` is the stencil cutter: it keeps the positive part and flattens the rest. `sigmoid` squeezes the final numbers into 0–1, so every output is a valid color.
 
-At the start, all 66,307 blanks hold random numbers, so it paints noise. Confident, colorful noise.
+At the start, every blank holds a random number, so it paints noise. Confident, colorful noise.
 
 **[live demo]**
 
@@ -159,6 +159,12 @@ Seen across the whole image, each circle becomes a striped pattern:
 **[striped tiles]**
 
 Now fine detail is just a matter of combining stripes.
+
+That's the last step of our formula. **Step 4: circles instead of `x` and `y`.** Swap the plain `(x, y)` for those 256 circle values, and our 33,795 blanks become **66,307**:
+
+**[the equation panel]**
+
+> 🤓 **Nerd note:** `γ(x, y)` is the circles, and `B` holds their 128 random speeds and directions, picked once and never changed.
 
 ### Let's add the waves one at a time, too
 

@@ -481,6 +481,7 @@ input[type='range'] {
 }
 
 #morph-word-explain {
+  white-space: pre-line;
   font-family: var(--font-mono);
   font-size: 13px;
   font-variant-numeric: tabular-nums;

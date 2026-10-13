@@ -9,7 +9,7 @@ import * as tf from '@tensorflow/tfjs';
 import { psnr, type ModelConfig } from './model';
 import { Trainer } from './trainer';
 import { readPixels } from './pixels';
-import { wordToT } from './words';
+import { WORDS, wordToT } from './words';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -99,9 +99,14 @@ export function setupMorph(images: [HTMLImageElement, HTMLImageElement], config:
       wordExplain.textContent = 'Four letters, A to Z.';
       return;
     }
-    const { t, offWave, offFuji } = result;
-    wordExplain.textContent = `${wordInput.value}: ${offWave} letter${offWave === 1 ? '' : 's'} off WAVE, ${offFuji} off FUJI → t = ${offWave} / (${offWave} + ${offFuji}) = ${t.toFixed(2)}`;
-    setT(t);
+    // One line per letter: distance to the WAVE and FUJI letters, and that letter's t.
+    wordExplain.textContent = [
+      ...result.letters.map(
+        (l, i) => `${l.letter}: ${l.toWave} from ${WORDS[0][i]}, ${l.toFuji} from ${WORDS[1][i]} → ${l.t.toFixed(2)}`,
+      ),
+      `t = average = ${result.t.toFixed(2)}`,
+    ].join('\n');
+    setT(result.t);
   });
 
   return { pause: () => trainer.pause() };

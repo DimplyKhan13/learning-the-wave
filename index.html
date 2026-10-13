@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Learning the Wave</title>
+    <meta name="description" content="A neural network that never sees The Great Wave learns to paint it, live in your browser." />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌊</text></svg>" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <main>
+      <header class="intro">
+        <p class="kicker">A neural network learns to paint</p>
+        <h1>The Great Wave</h1>
+        <p class="lede">
+          This network never sees the picture. It gets a coordinate <code>(x, y)</code>, guesses a color, and is
+          told how wrong it was. Watch it learn, live, on your device.
+        </p>
+      </header>
+
+      <section class="demo" aria-label="Live demo">
+        <div class="panels">
+          <figure class="panel">
+            <img id="original" alt="The Great Wave off Kanagawa, Katsushika Hokusai" />
+            <figcaption>Original</figcaption>
+          </figure>
+          <figure class="panel">
+            <div class="painting">
+              <canvas id="painting" aria-label="The network's current painting"></canvas>
+              <span class="step-badge" id="step-badge">step 0</span>
+            </div>
+            <figcaption>What the network paints</figcaption>
+          </figure>
+          <figure class="panel panel-chart">
+            <canvas id="chart" aria-label="Training error over time"></canvas>
+            <figcaption>How wrong it is</figcaption>
+          </figure>
+        </div>
+
+        <div class="controls">
+          <button id="play" class="primary" type="button" disabled>Pause</button>
+          <button id="restart" type="button" disabled>Restart</button>
+          <div class="toggle" role="radiogroup" aria-label="Input encoding">
+            <button type="button" role="radio" data-fourier="true" aria-checked="true">With Fourier features</button>
+            <button type="button" role="radio" data-fourier="false" aria-checked="false">Without</button>
+          </div>
+        </div>
+        <p class="status" id="status">Loading…</p>
+      </section>
+
+      <footer class="credit">
+        <p>
+          <em>The Great Wave off Kanagawa</em>, Katsushika Hokusai, c. 1831. The Metropolitan Museum of Art, public
+          domain.
+        </p>
+      </footer>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

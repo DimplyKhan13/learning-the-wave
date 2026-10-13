@@ -17,6 +17,10 @@ const painting = $<HTMLCanvasElement>('painting');
 const stepBadge = $('step-badge');
 const paintingCaption = $('painting-caption');
 const eqCount = $('eq-count');
+const milestonesEl = $('milestones');
+
+/** Accuracy levels worth writing down, like SLO thresholds on a dashboard. */
+const MILESTONES = [0.5, 0.9, 0.95, 0.99, 0.999];
 const status = $('status');
 const playButton = $<HTMLButtonElement>('play');
 const restartButton = $<HTMLButtonElement>('restart');
@@ -85,6 +89,7 @@ async function main(): Promise<void> {
   });
   const errorChart = new MetricChart($<HTMLCanvasElement>('chart'), { title: 'ERROR (MSE, log scale)', scale: 'log' });
   let lastLoss = NaN;
+  let reached: { step: number; seconds: number }[] = [];
   const aspect = image.naturalWidth / image.naturalHeight;
 
   const trainer = new Trainer(pixels, {
@@ -95,6 +100,13 @@ async function main(): Promise<void> {
     async onPaint(step, img, accuracy) {
       await tf.browser.toPixels(img, painting);
       accuracyChart.push(step, accuracy);
+      // Log each threshold the first time it's crossed, with steps and wall time on this device.
+      while (reached.length < MILESTONES.length && accuracy >= MILESTONES[reached.length]) {
+        reached.push({ step, seconds: trainer.elapsedSeconds });
+      }
+      milestonesEl.textContent = reached
+        .map((m, i) => `${MILESTONES[i] * 100}% right: step ${m.step.toLocaleString('en-US')}, ${m.seconds.toFixed(1)} s`)
+        .join(' · ');
       stepBadge.textContent = `step ${step.toLocaleString('en-US')}`;
     },
     onStatus({ running, step, stepsPerSecond }) {
@@ -115,6 +127,7 @@ async function main(): Promise<void> {
   const start = async (next: ModelConfig) => {
     config = next;
     lastLoss = NaN;
+    reached = [];
     accuracyChart.reset(label(config));
     errorChart.reset(label(config));
     toggleButtons.forEach((b) => b.setAttribute('aria-checked', String(b.dataset.fourier === String(config.fourier))));

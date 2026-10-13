@@ -26,6 +26,8 @@ export class Trainer {
   step = 0;
   running = false;
   stepsPerSecond = 0;
+  private trainedMs = 0; // time spent training, pauses excluded
+  private resumedAt = 0;
   /** Repaint the network's output every N steps (repainting costs a GPU readback). */
   renderEvery = 10;
 
@@ -58,6 +60,8 @@ export class Trainer {
     this.net?.dispose();
     this.net = new PaintingNet(this.pixels, config);
     this.step = 0;
+    this.trainedMs = 0;
+    this.resumedAt = performance.now();
     this.lastPainted = -1;
     this.stepsPerFrame = 1;
     await this.paint();
@@ -67,11 +71,13 @@ export class Trainer {
   play(): void {
     if (this.running || !this.net) return;
     this.running = true;
+    this.resumedAt = performance.now();
     this.emitStatus();
     void this.loop(this.generation);
   }
 
   pause(): void {
+    if (this.running) this.trainedMs += performance.now() - this.resumedAt;
     this.running = false;
     this.emitStatus();
   }
@@ -92,6 +98,11 @@ export class Trainer {
     await this.paint();
     this.emitStatus();
     return this.step;
+  }
+
+  /** Seconds spent training since the last restart, not counting pauses. */
+  get elapsedSeconds(): number {
+    return (this.trainedMs + (this.running ? performance.now() - this.resumedAt : 0)) / 1000;
   }
 
   private async loop(generation: number): Promise<void> {
